@@ -6,16 +6,16 @@ import (
 	"path"
 	"sort"
 
-	"github.com/AdhityaRamadhanus/userland/config"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 func main() {
-	config.Init()
+	godotenv.Load()
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {

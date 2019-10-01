@@ -1,9 +1,27 @@
 package postgres
 
 import (
+	"database/sql"
+	"time"
+
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/jmoiron/sqlx"
 )
+
+type UserScanStruct struct {
+	ID         int
+	Email      string
+	Fullname   string
+	Phone      sql.NullString
+	Location   sql.NullString
+	Bio        sql.NullString
+	WebURL     sql.NullString
+	PictureURL sql.NullString
+	Password   string
+	TFAEnabled sql.NullBool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
 
 /*
 UserRepository is implementation of UserRepository interface
@@ -22,7 +40,7 @@ func NewUserRepository(conn *sqlx.DB) *UserRepository {
 
 //Find User by id
 func (s UserRepository) Find(id int) (user userland.User, err error) {
-	user = userland.User{}
+	userScanStruct := UserScanStruct{}
 	query := `SELECT
 				id,
 				email, 
@@ -36,17 +54,18 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 				updatedAt
 			FROM users 
 			WHERE id=$1`
-	err = s.db.Get(user, query, id)
+	err = s.db.Get(&userScanStruct, query, id)
 	if err != nil {
 		return userland.User{}, err
 	}
 
+	user = s.convertStructScanToEntity(userScanStruct)
 	return user, nil
 }
 
 //FindByEmail User by email
 func (s UserRepository) FindByEmail(email string) (user userland.User, err error) {
-	user = userland.User{}
+	userScanStruct := UserScanStruct{}
 	query := `SELECT
 				id,
 				email, 
@@ -60,11 +79,12 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 				updatedAt
 			FROM users 
 			WHERE email=$1`
-	err = s.db.Get(user, query, email)
+	err = s.db.Get(&userScanStruct, query, email)
 	if err != nil {
 		return userland.User{}, err
 	}
 
+	user = s.convertStructScanToEntity(userScanStruct)
 	return user, nil
 }
 
@@ -123,6 +143,7 @@ func (s UserRepository) Update(user userland.User) error {
 				location,
 				bio,
 				weburl,
+				password,
 				pictureurl,
 				tfaenabled,
 				updatedAt
@@ -133,6 +154,7 @@ func (s UserRepository) Update(user userland.User) error {
 				:location,
 				:bio,
 				:weburl,
+				crypt(:password, gen_salt('bf')),
 				:pictureurl,
 				:tfaenabled,
 				now()
@@ -140,4 +162,30 @@ func (s UserRepository) Update(user userland.User) error {
 
 	_, err := s.db.NamedQuery(query, user)
 	return err
+}
+
+func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct) userland.User {
+	user := userland.User{
+		ID:       userScanStruct.ID,
+		Fullname: userScanStruct.Fullname,
+		Email:    userScanStruct.Email,
+	}
+
+	if userScanStruct.Phone.Valid {
+		user.Phone = userScanStruct.Phone.String
+	}
+	if userScanStruct.Location.Valid {
+		user.Location = userScanStruct.Location.String
+	}
+	if userScanStruct.Bio.Valid {
+		user.Bio = userScanStruct.Bio.String
+	}
+	if userScanStruct.WebURL.Valid {
+		user.WebURL = userScanStruct.WebURL.String
+	}
+	if userScanStruct.PictureURL.Valid {
+		user.PictureURL = userScanStruct.PictureURL.String
+	}
+
+	return user
 }
