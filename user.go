@@ -16,6 +16,7 @@ type User struct {
 	PictureURL string
 	Password   string
 	TFAEnabled bool
+	Verified   bool
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -24,6 +25,7 @@ type User struct {
 type UserRepository interface {
 	Find(id int) (User, error)
 	FindByEmail(email string) (User, error)
+	FindByEmailAndPassword(email, password string) (User, error)
 	Insert(user User) error
 	Update(user User) error
 	Delete(id int) error
