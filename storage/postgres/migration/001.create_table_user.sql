@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     weburl varchar(255),
     pictureurl varchar(255),
     tfaenabled boolean,
+    verified boolean,
     password TEXT NOT NULL,
     createdAt TIMESTAMP,
     updatedAt TIMESTAMP,

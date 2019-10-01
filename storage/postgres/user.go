@@ -88,6 +88,30 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 	return user, nil
 }
 
+func (s UserRepository) FindByEmailAndPassword(email, password string) (user userland.User, err error) {
+	userScanStruct := UserScanStruct{}
+	query := `SELECT
+				id,
+				email, 
+				fullname, 
+				phone, 
+				location,
+				bio,
+				weburl,
+				pictureurl,
+				createdAt, 
+				updatedAt
+			FROM users 
+			WHERE email=$1 AND password=crypt($2, password)`
+	err = s.db.Get(&userScanStruct, query, email, password)
+	if err != nil {
+		return userland.User{}, err
+	}
+
+	user = s.convertStructScanToEntity(userScanStruct)
+	return user, nil
+}
+
 //Delete delete story by id
 func (s UserRepository) Delete(id int) error {
 	query := `DELETE FROM users where id=$1`
