@@ -37,8 +37,6 @@ func main() {
 		claims["exp"] = nowInSeconds + int64(exp.Seconds())
 	}
 
-	log.Println("Generating access token for ", *clientName)
-
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := jwtToken.SignedString([]byte(viper.GetString("jwt_secret")))
 	if err != nil {
