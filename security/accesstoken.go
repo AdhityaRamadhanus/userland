@@ -2,8 +2,8 @@ package security
 
 import (
 	"fmt"
-	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -22,9 +22,10 @@ type AccessToken struct {
 	ExpiredAt time.Time
 }
 
-func generateSessionID() string {
+func GenerateSessionID() string {
 	id := uuid.NewV4()
-	return id.String()
+	splitID := strings.Split(id.String(), "-")
+	return strings.Join(splitID, "")
 }
 
 type AccessTokenOptions struct {
@@ -37,12 +38,15 @@ func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessTo
 
 	// generate value token
 	claims := jwt.MapClaims{
-		"iss":    "userland-api",
-		"aud":    clientName,
-		"sub":    fmt.Sprintf("userland-access-token|%s|%d", clientName, nowInSeconds),
-		"iat":    nowInSeconds,
-		"client": clientName,
-		"scope":  options.Scope,
+		"iss":      "userland-api",
+		"aud":      clientName,
+		"sub":      fmt.Sprintf("userland-access-token|%s|%d", clientName, nowInSeconds),
+		"iat":      nowInSeconds,
+		"client":   clientName,
+		"scope":    options.Scope,
+		"fullname": user.Fullname,
+		"email":    user.Email,
+		"userid":   user.ID,
 	}
 
 	expirationEpoch := nowInSeconds + int64(options.Expiration.Seconds())
@@ -54,10 +58,8 @@ func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessTo
 		return AccessToken{}, err
 	}
 
-	log.Println(tokenString)
-
 	// generate session id
-	sessionID := generateSessionID()
+	sessionID := GenerateSessionID()
 
 	return AccessToken{
 		Key:       sessionID,
