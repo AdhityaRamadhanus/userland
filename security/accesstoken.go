@@ -3,12 +3,10 @@ package security
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/dgrijalva/jwt-go"
-	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -20,12 +18,6 @@ type AccessToken struct {
 	Value     string
 	Type      string
 	ExpiredAt time.Time
-}
-
-func GenerateSessionID() string {
-	id := uuid.NewV4()
-	splitID := strings.Split(id.String(), "-")
-	return strings.Join(splitID, "")
 }
 
 type AccessTokenOptions struct {
@@ -59,7 +51,7 @@ func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessTo
 	}
 
 	// generate session id
-	sessionID := GenerateSessionID()
+	sessionID := GenerateUUID()
 
 	return AccessToken{
 		Key:       sessionID,
