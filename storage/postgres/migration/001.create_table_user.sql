@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     tfaenabled boolean,
     verified boolean,
     password TEXT NOT NULL,
+    backupcodes text[],
     createdAt TIMESTAMP,
     updatedAt TIMESTAMP,
 
