@@ -1,3 +1,5 @@
+// +build all repository
+
 package postgres_test
 
 import (

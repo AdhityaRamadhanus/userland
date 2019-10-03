@@ -1,3 +1,5 @@
+// +build all service
+
 package authentication_test
 
 import (

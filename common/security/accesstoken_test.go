@@ -1,3 +1,5 @@
+// +build all common
+
 package security_test
 
 import (
@@ -5,7 +7,7 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/security"
+	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1,3 +1,5 @@
+// +build all repository
+
 package redis_test
 
 import (
