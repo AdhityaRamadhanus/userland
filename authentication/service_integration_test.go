@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
@@ -36,6 +39,8 @@ func Setup(db *sqlx.DB, redisClient *_redis.Client) {
 	if err != nil {
 		log.Fatal("Cannot setup redis")
 	}
+
+	time.Sleep(time.Second * 2)
 }
 
 func TestMain(m *testing.M) {
@@ -148,7 +153,7 @@ func TestVerifyAccountIntegration(t *testing.T) {
 		user, err := userRepository.FindByEmail(testCase.Email)
 		assert.Nil(t, err)
 		// get code
-		key := fmt.Sprintf("%s:%d:%s", "email-verify", user.ID, verificationID)
+		key := keygenerator.EmailVerificationKey(user, verificationID)
 		val, err := keyValueService.Get(key)
 		assert.Nil(t, err)
 
@@ -239,7 +244,7 @@ func TestVerifyTFAIntegration(t *testing.T) {
 		_, tfaToken, err := authenticationService.Login(testCase.Email, testCase.Password)
 		assert.Nil(t, err)
 
-		tfaKey := fmt.Sprintf("%s:%d:%s", "tfa-verify", user.ID, tfaToken.Key)
+		tfaKey := keygenerator.TFAVerificationKey(user, tfaToken.Key)
 		expectedCode, err := keyValueService.Get(tfaKey)
 		assert.Nil(t, err)
 

@@ -2,17 +2,23 @@ package authentication
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/security"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
+	"github.com/AdhityaRamadhanus/userland/common/security"
 )
 
 var (
-	ErrUserNotVerified = errors.New("User not verified")
-	ErrWrongPassword   = errors.New("Wrong password")
+	ErrUserNotVerified       = errors.New("User not verified")
+	ErrWrongPassword         = errors.New("Wrong password")
+	ErrServiceNotImplemented = errors.New("Service not implemented")
+	ErrWrongOTP              = errors.New("Wrong OTP")
+
+	UserAccessTokenExpiration   = time.Second * 60 * 10 // 10 minutes
+	TFATokenExpiration          = time.Second * 60 * 2  // 2 minutes
+	ForgotPassExpiration        = time.Second * 60 * 5  // 5 minutes
+	EmailVerificationExpiration = time.Second * 60 * 2
 )
 
 //Service provide an interface to story domain service
@@ -40,11 +46,7 @@ type service struct {
 }
 
 func (s *service) Register(user userland.User) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.MinCost)
-	if err != nil {
-		return err
-	}
-	user.Password = string(hash)
+	user.Password = security.HashPassword(user.Password)
 	return s.userRepository.Insert(user)
 }
 
@@ -63,12 +65,11 @@ func (s *service) RequestVerification(verificationType string, email string) (ve
 		}
 		// create redis key verification
 		verificationID := security.GenerateUUID()
-		key := fmt.Sprintf("%s:%d:%s", "email-verify", user.ID, verificationID)
-		s.keyValueService.SetEx(key, []byte(code), time.Second*60)
+		s.keyValueService.SetEx(keygenerator.EmailVerificationKey(user, verificationID), []byte(code), EmailVerificationExpiration)
 		// call mail service here
 		return verificationID, nil
 	default:
-		return "", errors.New("Service not Implemented")
+		return "", ErrServiceNotImplemented
 	}
 }
 
@@ -78,19 +79,55 @@ func (s *service) VerifyAccount(verificationID string, email string, code string
 		return err
 	}
 
-	key := fmt.Sprintf("%s:%d:%s", "email-verify", user.ID, verificationID)
-	expectedCode, err := s.keyValueService.Get(key)
+	verificationKey := keygenerator.EmailVerificationKey(user, verificationID)
+	expectedCode, err := s.keyValueService.Get(verificationKey)
 	if err != nil {
 		return err
 	}
 
 	if string(expectedCode) != code {
-		return errors.New("OTP doesn't match")
+		return ErrWrongOTP
 	}
 
-	defer s.keyValueService.Delete(key)
+	defer s.keyValueService.Delete(verificationKey)
 	user.Verified = true
 	return s.userRepository.Update(user)
+}
+
+func (s *service) loginWithTFA(user userland.User) (accessToken security.AccessToken, err error) {
+	code, err := security.GenerateOTP(6)
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
+		Expiration: TFATokenExpiration,
+		Scope:      security.TFATokenScope,
+	})
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	tfaKey := keygenerator.TFAVerificationKey(user, accessToken.Key)
+	s.keyValueService.SetEx(tfaKey, []byte(code), TFATokenExpiration)
+
+	sessionKey := keygenerator.SessionKey(user, accessToken.Key)
+	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), TFATokenExpiration)
+	return accessToken, nil
+}
+
+func (s *service) loginNormal(user userland.User) (accessToken security.AccessToken, err error) {
+	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
+		Expiration: UserAccessTokenExpiration,
+		Scope:      security.UserTokenScope,
+	})
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	sessionKey := keygenerator.SessionKey(user, accessToken.Key)
+	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), UserAccessTokenExpiration)
+	return accessToken, nil
 }
 
 func (s *service) Login(email, password string) (requireTFA bool, accessToken security.AccessToken, err error) {
@@ -99,8 +136,7 @@ func (s *service) Login(email, password string) (requireTFA bool, accessToken se
 		return false, security.AccessToken{}, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
+	if err = security.ComparePassword(user.Password, password); err != nil {
 		return false, security.AccessToken{}, ErrWrongPassword
 	}
 
@@ -110,45 +146,23 @@ func (s *service) Login(email, password string) (requireTFA bool, accessToken se
 	}
 
 	if user.TFAEnabled {
-		// create code
-		code, err := security.GenerateOTP(6)
-		if err != nil {
-			return false, security.AccessToken{}, err
-		}
-
-		accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-			Expiration: time.Second * 60 * 10,
-			Scope:      []string{"tfa"},
-		})
-		if err != nil {
-			return false, security.AccessToken{}, err
-		}
-
-		tfaKey := fmt.Sprintf("%s:%d:%s", "tfa-verify", user.ID, accessToken.Key)
-		s.keyValueService.SetEx(tfaKey, []byte(code), time.Second*60)
-
-		sessionKey := fmt.Sprintf("session:%d:%s", user.ID, accessToken.Key)
-		s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), time.Second*60*10)
-		return true, accessToken, nil
+		accessToken, err := s.loginWithTFA(user)
+		return true, accessToken, err
 	}
 
-	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-		Expiration: time.Second * 60 * 10,
-		Scope:      []string{"user"},
-	})
-	if err != nil {
-		return false, security.AccessToken{}, err
-	}
-
-	sessionKey := fmt.Sprintf("session:%d:%s", user.ID, accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), time.Second*60*10)
-	return false, accessToken, nil
+	accessToken, err = s.loginNormal(user)
+	return false, accessToken, err
 }
 
 func (s *service) VerifyTFA(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
 	// find user
-	tfaKey := fmt.Sprintf("%s:%d:%s", "tfa-verify", userID, tfaToken)
-	tfaSessionKey := fmt.Sprintf("session:%d:%s", userID, tfaToken)
+	user, err := s.userRepository.Find(userID)
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	tfaKey := keygenerator.TFAVerificationKey(user, tfaToken)
+	tfaSessionKey := keygenerator.SessionKey(user, tfaToken)
 	expectedCode, err := s.keyValueService.Get(tfaKey)
 	if err != nil {
 		return security.AccessToken{}, err
@@ -156,44 +170,27 @@ func (s *service) VerifyTFA(tfaToken string, userID int, code string) (accessTok
 
 	// check code
 	if string(expectedCode) != code {
-		return security.AccessToken{}, errors.New("OTP doesn't match")
-	}
-
-	user, err := s.userRepository.Find(userID)
-	if err != nil {
-		return security.AccessToken{}, err
-	}
-	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-		Expiration: time.Second * 60 * 10,
-		Scope:      []string{"user"},
-	})
-	if err != nil {
-		return security.AccessToken{}, err
+		return security.AccessToken{}, ErrWrongOTP
 	}
 
 	defer s.keyValueService.Delete(tfaKey)
 	defer s.keyValueService.Delete(tfaSessionKey)
-
-	sessionKey := fmt.Sprintf("session:%d:%s", user.ID, accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), time.Second*60*10)
-	return accessToken, nil
+	return s.loginNormal(user)
 }
 
 func (s *service) VerifyTFABypass(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
 	// find user
-	tfaKey := fmt.Sprintf("%s:%d:%s", "tfa-verify", userID, tfaToken)
-	tfaSessionKey := fmt.Sprintf("session:%d:%s", userID, tfaToken)
-
 	user, err := s.userRepository.Find(userID)
 	if err != nil {
 		return security.AccessToken{}, err
 	}
 
+	tfaKey := keygenerator.TFAVerificationKey(user, tfaToken)
+	tfaSessionKey := keygenerator.SessionKey(user, tfaToken)
 	codeFound := false
 	foundIdx := -1
 	for idx, backupCode := range user.BackupCodes {
-		err = bcrypt.CompareHashAndPassword([]byte(backupCode), []byte(code))
-		if err == nil {
+		if err = security.ComparePassword(backupCode, code); err == nil {
 			codeFound = true
 			foundIdx = idx
 			break
@@ -204,23 +201,12 @@ func (s *service) VerifyTFABypass(tfaToken string, userID int, code string) (acc
 		return security.AccessToken{}, errors.New("code doesn't match any backup codes")
 	}
 
-	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-		Expiration: time.Second * 60 * 10,
-		Scope:      []string{"user"},
-	})
-	if err != nil {
-		return security.AccessToken{}, err
-	}
-
 	user.BackupCodes = append(user.BackupCodes[:foundIdx], user.BackupCodes[foundIdx+1:]...)
 	s.userRepository.StoreBackupCodes(user)
 
 	defer s.keyValueService.Delete(tfaKey)
 	defer s.keyValueService.Delete(tfaSessionKey)
-
-	sessionKey := fmt.Sprintf("session:%d:%s", user.ID, accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), time.Second*60*10)
-	return accessToken, nil
+	return s.loginNormal(user)
 }
 
 func (s *service) ForgotPassword(email string) (verificationID string, err error) {
@@ -230,16 +216,16 @@ func (s *service) ForgotPassword(email string) (verificationID string, err error
 	}
 
 	verificationID = security.GenerateUUID()
-	forgotPassKey := fmt.Sprintf("%s:%s", "forgot-password-token", verificationID)
-	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), time.Second*60)
+	forgotPassKey := keygenerator.ForgotPasswordKey(verificationID)
+	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), ForgotPassExpiration)
 	// call mail service
 	return verificationID, nil
 }
 
 func (s *service) ResetPassword(forgotPassToken string, newPassword string) error {
 	// verify token
-	key := fmt.Sprintf("%s:%s", "forgot-password-token", forgotPassToken)
-	email, err := s.keyValueService.Get(key)
+	forgotPassKey := keygenerator.ForgotPasswordKey(forgotPassToken)
+	email, err := s.keyValueService.Get(forgotPassKey)
 	if err != nil {
 		return err
 	}
@@ -250,13 +236,7 @@ func (s *service) ResetPassword(forgotPassToken string, newPassword string) erro
 	}
 
 	// update password
-	user.Password = newPassword
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.MinCost)
-	if err != nil {
-		return err
-	}
-
-	defer s.keyValueService.Delete(key)
-	user.Password = string(hash)
+	user.Password = security.HashPassword(newPassword)
+	defer s.keyValueService.Delete(forgotPassKey)
 	return s.userRepository.Update(user)
 }
