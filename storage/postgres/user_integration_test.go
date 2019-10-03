@@ -1,3 +1,5 @@
+// +build all repository
+
 package postgres_test
 
 import (
@@ -110,6 +112,15 @@ func TestUpdateUserByIDIntegration(t *testing.T) {
 	user.Bio = "Test Aja"
 	err = userRepository.Update(user)
 	assert.Nil(t, err, "Failed to update user by id")
+}
+
+func TestStoreBackupCodesByIDIntegration(t *testing.T) {
+	email := "adhitya.ramadhanus@icehousecorp.com"
+	user, err := userRepository.FindByEmail(email)
+
+	user.BackupCodes = []string{"xxx", "xxx"}
+	err = userRepository.StoreBackupCodes(user)
+	assert.Nil(t, err, "Failed to store backupd codes user")
 }
 
 func TestDeleteUserByIDIntegration(t *testing.T) {

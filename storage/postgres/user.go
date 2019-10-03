@@ -6,26 +6,29 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type UserScanStruct struct {
-	ID         int
-	Email      string
-	Fullname   string
-	Phone      sql.NullString
-	Location   sql.NullString
-	Bio        sql.NullString
-	WebURL     sql.NullString
-	PictureURL sql.NullString
-	Password   string
-	TFAEnabled sql.NullBool
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID          int
+	Email       string
+	Fullname    string
+	Phone       sql.NullString
+	Location    sql.NullString
+	Bio         sql.NullString
+	WebURL      sql.NullString
+	PictureURL  sql.NullString
+	Password    string
+	TFAEnabled  sql.NullBool
+	Verified    sql.NullBool
+	BackupCodes pq.StringArray
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 /*
 UserRepository is implementation of UserRepository interface
-of chronicle domain using postgre
+of userland domain using postgre
 */
 type UserRepository struct {
 	db *sqlx.DB
@@ -50,12 +53,19 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 				bio,
 				weburl,
 				pictureurl,
+				verified,
+				tfaenabled,
+				password,
+				backupcodes,
 				createdAt, 
 				updatedAt
 			FROM users 
 			WHERE id=$1`
 	err = s.db.Get(&userScanStruct, query, id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return userland.User{}, userland.ErrUserNotFound
+		}
 		return userland.User{}, err
 	}
 
@@ -75,12 +85,20 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 				bio,
 				weburl,
 				pictureurl,
+				verified,
+				tfaenabled,
+				password,
+				backupcodes,
 				createdAt, 
 				updatedAt
 			FROM users 
 			WHERE email=$1`
+
 	err = s.db.Get(&userScanStruct, query, email)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return userland.User{}, userland.ErrUserNotFound
+		}
 		return userland.User{}, err
 	}
 
@@ -121,7 +139,7 @@ func (s UserRepository) Insert(user userland.User) error {
 				:fullname, 
 				:phone, 
 				:location,
-				crypt(:password, gen_salt('bf')),
+				:password,
 				:bio,
 				:weburl,
 				:pictureurl,
@@ -130,7 +148,8 @@ func (s UserRepository) Insert(user userland.User) error {
 				now()
 			) RETURNING id`
 
-	_, err := s.db.NamedQuery(query, user)
+	nstmt, err := s.db.PrepareNamed(query)
+	_, err = nstmt.Query(user)
 	return err
 }
 
@@ -145,6 +164,7 @@ func (s UserRepository) Update(user userland.User) error {
 				weburl,
 				password,
 				pictureurl,
+				verified,
 				tfaenabled,
 				updatedAt
 			) = (
@@ -154,8 +174,9 @@ func (s UserRepository) Update(user userland.User) error {
 				:location,
 				:bio,
 				:weburl,
-				crypt(:password, gen_salt('bf')),
+				:password,
 				:pictureurl,
+				:verified,
 				:tfaenabled,
 				now()
 			) WHERE id=:id`
@@ -164,11 +185,19 @@ func (s UserRepository) Update(user userland.User) error {
 	return err
 }
 
+func (s UserRepository) StoreBackupCodes(user userland.User) error {
+	query := `UPDATE users SET (backupcodes, updatedAt) = ($2, now()) WHERE id=$1`
+	_, err := s.db.Query(query, user.ID, pq.Array(user.BackupCodes))
+	return err
+}
+
 func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct) userland.User {
 	user := userland.User{
-		ID:       userScanStruct.ID,
-		Fullname: userScanStruct.Fullname,
-		Email:    userScanStruct.Email,
+		ID:          userScanStruct.ID,
+		Fullname:    userScanStruct.Fullname,
+		Email:       userScanStruct.Email,
+		Password:    userScanStruct.Password,
+		BackupCodes: []string(userScanStruct.BackupCodes),
 	}
 
 	if userScanStruct.Phone.Valid {
@@ -185,6 +214,12 @@ func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct)
 	}
 	if userScanStruct.PictureURL.Valid {
 		user.PictureURL = userScanStruct.PictureURL.String
+	}
+	if userScanStruct.TFAEnabled.Valid {
+		user.TFAEnabled = userScanStruct.TFAEnabled.Bool
+	}
+	if userScanStruct.Verified.Valid {
+		user.Verified = userScanStruct.Verified.Bool
 	}
 
 	return user

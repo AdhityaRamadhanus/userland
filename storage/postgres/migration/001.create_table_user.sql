@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
     weburl varchar(255),
     pictureurl varchar(255),
     tfaenabled boolean,
+    verified boolean,
     password TEXT NOT NULL,
+    backupcodes text[],
     createdAt TIMESTAMP,
     updatedAt TIMESTAMP,
 
