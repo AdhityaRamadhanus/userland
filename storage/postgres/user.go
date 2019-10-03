@@ -28,7 +28,7 @@ type UserScanStruct struct {
 
 /*
 UserRepository is implementation of UserRepository interface
-of chronicle domain using postgre
+of userland domain using postgre
 */
 type UserRepository struct {
 	db *sqlx.DB

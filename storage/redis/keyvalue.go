@@ -8,12 +8,12 @@ import (
 	"github.com/go-redis/redis"
 )
 
-//CacheService implements chronicle.CacheService interface using redis
+//KeyValueService implements userland.KeyValueService interface using redis
 type KeyValueService struct {
 	redisClient *redis.Client
 }
 
-//NewCacheService construct a new CacheService from redis client
+//NewKeyValueService construct a new KeyValueService from redis client
 func NewKeyValueService(redisClient *redis.Client) *KeyValueService {
 	return &KeyValueService{
 		redisClient: redisClient,
