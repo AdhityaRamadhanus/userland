@@ -3,8 +3,6 @@
 OS := $(shell uname)
 VERSION ?= 1.0.0
 
-PKG_NAME = github.com/AdhityaRamadhanus/chronicle
-
 # target #
 
 default: unit-test build
