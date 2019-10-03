@@ -111,7 +111,7 @@ func (s *service) loginWithTFA(user userland.User) (accessToken security.AccessT
 	tfaKey := keygenerator.TFAVerificationKey(user, accessToken.Key)
 	s.keyValueService.SetEx(tfaKey, []byte(code), TFATokenExpiration)
 
-	sessionKey := keygenerator.SessionKey(user, accessToken.Key)
+	sessionKey := keygenerator.SessionKey(accessToken.Key)
 	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), TFATokenExpiration)
 	return accessToken, nil
 }
@@ -125,7 +125,7 @@ func (s *service) loginNormal(user userland.User) (accessToken security.AccessTo
 		return security.AccessToken{}, err
 	}
 
-	sessionKey := keygenerator.SessionKey(user, accessToken.Key)
+	sessionKey := keygenerator.SessionKey(accessToken.Key)
 	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), UserAccessTokenExpiration)
 	return accessToken, nil
 }
@@ -162,7 +162,7 @@ func (s *service) VerifyTFA(tfaToken string, userID int, code string) (accessTok
 	}
 
 	tfaKey := keygenerator.TFAVerificationKey(user, tfaToken)
-	tfaSessionKey := keygenerator.SessionKey(user, tfaToken)
+	tfaSessionKey := keygenerator.SessionKey(tfaToken)
 	expectedCode, err := s.keyValueService.Get(tfaKey)
 	if err != nil {
 		return security.AccessToken{}, err
@@ -186,7 +186,7 @@ func (s *service) VerifyTFABypass(tfaToken string, userID int, code string) (acc
 	}
 
 	tfaKey := keygenerator.TFAVerificationKey(user, tfaToken)
-	tfaSessionKey := keygenerator.SessionKey(user, tfaToken)
+	tfaSessionKey := keygenerator.SessionKey(tfaToken)
 	codeFound := false
 	foundIdx := -1
 	for idx, backupCode := range user.BackupCodes {
