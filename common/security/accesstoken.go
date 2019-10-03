@@ -12,8 +12,8 @@ import (
 var (
 	clientName = "userland-app"
 
-	TFATokenScope  = []string{"tfa"}
-	UserTokenScope = []string{"user"}
+	TFATokenScope  = "tfa"
+	UserTokenScope = "user"
 )
 
 type AccessToken struct {
@@ -25,7 +25,7 @@ type AccessToken struct {
 
 type AccessTokenOptions struct {
 	Expiration time.Duration
-	Scope      []string
+	Scope      string
 }
 
 func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessToken, error) {
