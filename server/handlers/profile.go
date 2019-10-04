@@ -37,6 +37,7 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/tfa/enroll", authenticate(authorize(security.UserTokenScope, h.enrollTFA))).Methods("GET")
 	router.HandleFunc("/me/tfa/enroll", authenticate(authorize(security.UserTokenScope, h.activateTFA))).Methods("POST")
 	router.HandleFunc("/me/tfa/remove", authenticate(authorize(security.UserTokenScope, h.removeTFA))).Methods("POST")
+	router.HandleFunc("/me/delete", authenticate(authorize(security.UserTokenScope, h.deleteAccount))).Methods("POST")
 }
 
 func (h *ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {
@@ -491,6 +492,64 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err = h.ProfileService.RemoveTFA(user, removeTFARequest.CurrentPassword); err != nil {
+		log.WithFields(log.Fields{
+			"request":      removeTFARequest,
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Change Email User")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"success": true,
+	})
+}
+
+func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	// Read Body, limit to 1 MB //
+	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		RenderError(res, ErrFailedToReadBody)
+		return
+	}
+
+	removeTFARequest := struct {
+		CurrentPassword string `json:"password" valid:"required"`
+	}{}
+
+	// Deserialize
+	if err := json.Unmarshal(body, &removeTFARequest); err != nil {
+		RenderError(res, ErrFailedToUnmarshalJSON)
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
+		RenderError(res, ErrInvalidRequest, err.Error())
+		return
+	}
+
+	if err = h.ProfileService.DeleteAccount(user, removeTFARequest.CurrentPassword); err != nil {
 		log.WithFields(log.Fields{
 			"request":      removeTFARequest,
 			"client":       req.Header.Get("X-API-ClientID"),
