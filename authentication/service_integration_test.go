@@ -6,46 +6,48 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
+	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/pkg/errors"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/authentication"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/suite"
 )
 
-var (
-	userRepository        *postgres.UserRepository
-	keyValueService       *redis.KeyValueService
-	authenticationService authentication.Service
-)
+type AuthenticationServiceTestSuite struct {
+	suite.Suite
+	DB                    *sqlx.DB
+	RedisClient           *_redis.Client
+	UserRepository        *postgres.UserRepository
+	KeyValueService       *redis.KeyValueService
+	AuthenticationService authentication.Service
+}
 
-func Setup(db *sqlx.DB, redisClient *_redis.Client) {
-	_, err := db.Query("DELETE FROM users")
+func (suite *AuthenticationServiceTestSuite) SetupTest() {
+	_, err := suite.DB.Query("DELETE FROM users")
 	if err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
 
-	err = redisClient.FlushAll().Err()
+	err = suite.RedisClient.FlushAll().Err()
 	if err != nil {
 		log.Fatal("Cannot setup redis")
 	}
-
-	time.Sleep(time.Second * 2)
 }
 
-func TestMain(m *testing.M) {
+// Make sure that VariableThatShouldStartAtFive is set to five
+// before each test
+func (suite *AuthenticationServiceTestSuite) Setup() {
 	godotenv.Load("../.env")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
@@ -64,18 +66,26 @@ func TestMain(m *testing.M) {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
-	Setup(db, redisClient)
+	keyValueService := redis.NewKeyValueService(redisClient)
+	userRepository := postgres.NewUserRepository(db)
+	authenticationService := authentication.NewService(userRepository, keyValueService)
 
-	// Repositories
-	keyValueService = redis.NewKeyValueService(redisClient)
-	userRepository = postgres.NewUserRepository(db)
-	authenticationService = authentication.NewService(userRepository, keyValueService)
-
-	code := m.Run()
-	os.Exit(code)
+	suite.DB = db
+	suite.RedisClient = redisClient
+	suite.KeyValueService = keyValueService
+	suite.UserRepository = userRepository
+	suite.AuthenticationService = authenticationService
 }
 
-func TestRegisterIntegration(t *testing.T) {
+// In order for 'go test' to run this suite, we need to create
+// a normal test function and pass our suite to suite.Run
+func TestAuthenticationService(t *testing.T) {
+	suiteTest := new(AuthenticationServiceTestSuite)
+	suiteTest.Setup()
+	suite.Run(t, suiteTest)
+}
+
+func (suite *AuthenticationServiceTestSuite) TestRegisterIntegration() {
 	testCases := []struct {
 		User        userland.User
 		ExpectError bool
@@ -107,16 +117,23 @@ func TestRegisterIntegration(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		err := authenticationService.Register(testCase.User)
+		err := suite.AuthenticationService.Register(testCase.User)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestRequestVerificationIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestRequestVerificationIntegration() {
+	// setup
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test123"),
+	})
+
 	testCases := []struct {
 		Email       string
 		ExpectError bool
@@ -128,16 +145,23 @@ func TestRequestVerificationIntegration(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		_, err := authenticationService.RequestVerification("email.verify", testCase.Email)
+		_, err := suite.AuthenticationService.RequestVerification("email.verify", testCase.Email)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestVerifyAccountIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestVerifyAccountIntegration() {
+	// setup
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test123"),
+	})
+
 	testCases := []struct {
 		Email       string
 		ExpectError bool
@@ -149,26 +173,33 @@ func TestVerifyAccountIntegration(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		verificationID, err := authenticationService.RequestVerification("email.verify", testCase.Email)
-		assert.Nil(t, err)
+		verificationID, err := suite.AuthenticationService.RequestVerification("email.verify", testCase.Email)
+		suite.Nil(err)
 
-		user, err := userRepository.FindByEmail(testCase.Email)
-		assert.Nil(t, err)
+		user, err := suite.UserRepository.FindByEmail(testCase.Email)
+		suite.Nil(err)
 		// get code
 		key := keygenerator.EmailVerificationKey(user, verificationID)
-		val, err := keyValueService.Get(key)
-		assert.Nil(t, err)
+		val, err := suite.KeyValueService.Get(key)
+		suite.Nil(err)
 
-		err = authenticationService.VerifyAccount(verificationID, testCase.Email, string(val))
+		err = suite.AuthenticationService.VerifyAccount(verificationID, testCase.Email, string(val))
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestLoginIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestLoginIntegration() {
+	// setup
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test123"),
+	})
+
 	testCases := []struct {
 		Email       string
 		Password    string
@@ -178,20 +209,20 @@ func TestLoginIntegration(t *testing.T) {
 	}{
 		{
 			Email:       "adhitya.ramadhanus@icehousecorp.com",
-			Password:    "test1234",
+			Password:    "test123",
 			RequireTFA:  false,
 			Verified:    true,
 			ExpectError: false,
 		},
 		{
-			Email:       "adhitya.ramadhanus@gmail.com",
+			Email:       "adhitya.ramadhanus@icehousecorp.com",
 			Password:    "test123",
 			RequireTFA:  true,
 			Verified:    true,
 			ExpectError: false,
 		},
 		{
-			Email:       "adhitya.ramadhanus@gmail.com",
+			Email:       "adhitya.ramadhanus@icehousecorp.com",
 			Password:    "test123",
 			RequireTFA:  false,
 			Verified:    false,
@@ -201,23 +232,30 @@ func TestLoginIntegration(t *testing.T) {
 
 	for _, testCase := range testCases {
 		// setup
-		user, err := userRepository.FindByEmail(testCase.Email)
-		assert.Nil(t, err)
+		user, err := suite.UserRepository.FindByEmail(testCase.Email)
+		suite.Nil(err)
 		user.TFAEnabled = testCase.RequireTFA
 		user.Verified = testCase.Verified
-		userRepository.Update(user)
+		suite.UserRepository.Update(user)
 
-		requireTFA, _, err := authenticationService.Login(testCase.Email, testCase.Password)
+		requireTFA, _, err := suite.AuthenticationService.Login(testCase.Email, testCase.Password)
 		if testCase.ExpectError {
-			assert.NotNil(t, err, "should return error")
+			suite.NotNil(err, "should return error")
 		} else {
-			assert.Nil(t, err)
-			assert.Equal(t, requireTFA, testCase.RequireTFA)
+			suite.Nil(err)
+			suite.Equal(requireTFA, testCase.RequireTFA)
 		}
 	}
 }
 
-func TestVerifyTFAIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestVerifyTFAIntegration() {
+	// setup
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test123"),
+	})
+
 	testCases := []struct {
 		Email       string
 		Password    string
@@ -225,11 +263,6 @@ func TestVerifyTFAIntegration(t *testing.T) {
 	}{
 		{
 			Email:       "adhitya.ramadhanus@icehousecorp.com",
-			Password:    "test1234",
-			ExpectError: false,
-		},
-		{
-			Email:       "adhitya.ramadhanus@gmail.com",
 			Password:    "test123",
 			ExpectError: false,
 		},
@@ -237,29 +270,36 @@ func TestVerifyTFAIntegration(t *testing.T) {
 
 	for _, testCase := range testCases {
 		// setup
-		user, err := userRepository.FindByEmail(testCase.Email)
-		assert.Nil(t, err)
+		user, err := suite.UserRepository.FindByEmail(testCase.Email)
+		suite.Nil(err)
 		user.TFAEnabled = true
 		user.Verified = true
-		userRepository.Update(user)
+		suite.UserRepository.Update(user)
 
-		_, tfaToken, err := authenticationService.Login(testCase.Email, testCase.Password)
-		assert.Nil(t, err)
+		_, tfaToken, err := suite.AuthenticationService.Login(testCase.Email, testCase.Password)
+		suite.Nil(err)
 
 		tfaKey := keygenerator.TFAVerificationKey(user, tfaToken.Key)
-		expectedCode, err := keyValueService.Get(tfaKey)
-		assert.Nil(t, err)
+		expectedCode, err := suite.KeyValueService.Get(tfaKey)
+		suite.Nil(err)
 
-		_, err = authenticationService.VerifyTFA(tfaToken.Key, user.ID, string(expectedCode))
+		_, err = suite.AuthenticationService.VerifyTFA(tfaToken.Key, user.ID, string(expectedCode))
 		if testCase.ExpectError {
-			assert.NotNil(t, err, "should return error")
+			suite.NotNil(err, "should return error")
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestVerifyTFABypassIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestVerifyTFABypassIntegration() {
+	// setup
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test1234"),
+	})
+
 	testCases := []struct {
 		Email       string
 		Password    string
@@ -272,41 +312,40 @@ func TestVerifyTFABypassIntegration(t *testing.T) {
 			BackupCode:  "backupaja1232",
 			ExpectError: false,
 		},
-		{
-			Email:       "adhitya.ramadhanus@gmail.com",
-			Password:    "test123",
-			BackupCode:  "backupaja1232",
-			ExpectError: false,
-		},
 	}
 
 	for _, testCase := range testCases {
 		// setup
-		user, err := userRepository.FindByEmail(testCase.Email)
-		assert.Nil(t, err)
+		user, err := suite.UserRepository.FindByEmail(testCase.Email)
+		suite.Nil(err)
 
 		user.TFAEnabled = true
 		user.Verified = true
-		userRepository.Update(user)
-		hash, err := bcrypt.GenerateFromPassword([]byte(testCase.BackupCode), bcrypt.MinCost)
+		err = suite.UserRepository.Update(user)
+		suite.Nil(err)
 
-		assert.Nil(t, err)
-		user.BackupCodes = []string{string(hash)}
-		userRepository.StoreBackupCodes(user)
+		user.BackupCodes = []string{security.HashPassword(testCase.BackupCode)}
+		suite.UserRepository.StoreBackupCodes(user)
 
-		_, tfaToken, err := authenticationService.Login(testCase.Email, testCase.Password)
-		assert.Nil(t, err)
+		_, tfaToken, err := suite.AuthenticationService.Login(testCase.Email, testCase.Password)
+		suite.Nil(err)
 
-		_, err = authenticationService.VerifyTFABypass(tfaToken.Key, user.ID, string(testCase.BackupCode))
+		_, err = suite.AuthenticationService.VerifyTFABypass(tfaToken.Key, user.ID, string(testCase.BackupCode))
 		if testCase.ExpectError {
-			assert.NotNil(t, err, "should return error")
+			suite.NotNil(err, "should return error")
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestForgotPasswordIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestForgotPasswordIntegration() {
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test1234"),
+	})
+
 	testCases := []struct {
 		Email       string
 		ExpectError bool
@@ -315,19 +354,30 @@ func TestForgotPasswordIntegration(t *testing.T) {
 			Email:       "adhitya.ramadhanus@icehousecorp.com",
 			ExpectError: false,
 		},
+		{
+			Email:       "adhitya.ramadhanus@secorp.com",
+			ExpectError: true,
+		},
 	}
 
 	for _, testCase := range testCases {
-		_, err := authenticationService.ForgotPassword(testCase.Email)
+		_, err := suite.AuthenticationService.ForgotPassword(testCase.Email)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestResetPasswordIntegration(t *testing.T) {
+func (suite *AuthenticationServiceTestSuite) TestResetPasswordIntegration() {
+	suite.UserRepository.Insert(userland.User{
+		Email:    "adhitya.ramadhanus@icehousecorp.com",
+		Fullname: "Adhitya Ramadhanus",
+		Password: security.HashPassword("test1234"),
+		Verified: true,
+	})
+
 	testCases := []struct {
 		Email       string
 		NewPassword string
@@ -341,17 +391,17 @@ func TestResetPasswordIntegration(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		verificationID, err := authenticationService.ForgotPassword(testCase.Email)
-		assert.Nil(t, err)
+		verificationID, err := suite.AuthenticationService.ForgotPassword(testCase.Email)
+		suite.Nil(err)
 
-		err = authenticationService.ResetPassword(verificationID, testCase.NewPassword)
+		err = suite.AuthenticationService.ResetPassword(verificationID, testCase.NewPassword)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 
-		_, _, err = authenticationService.Login(testCase.Email, testCase.NewPassword)
-		assert.Nil(t, err)
+		_, _, err = suite.AuthenticationService.Login(testCase.Email, testCase.NewPassword)
+		suite.Nil(err)
 	}
 }

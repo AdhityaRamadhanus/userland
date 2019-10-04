@@ -131,7 +131,8 @@ func (s UserRepository) Insert(user userland.User) error {
 				bio,
 				weburl,
 				pictureurl,
-				tfaenabled, 
+				tfaenabled,
+				verified,
 				createdAt, 
 				updatedAt
 			) VALUES (
@@ -144,6 +145,7 @@ func (s UserRepository) Insert(user userland.User) error {
 				:weburl,
 				:pictureurl,
 				:tfaenabled,
+				:verified,
 				now(), 
 				now()
 			) RETURNING id`
