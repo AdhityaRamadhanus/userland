@@ -13,8 +13,8 @@ unit-test:
 	go test -count=1 -v -short --cover ./...
 
 integration-test:
-	go test authentication/service_integration_test.go -count=1 -v --cover
-	go test profile/service_integration_test.go -count=1 -v --cover
+	@go test ./... -count=1 --cover -tags="authentication" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 --cover -tags="profile" | { grep -v 'no test files'; true; }
 
 migration:
 	go run script/run_migration/main.go

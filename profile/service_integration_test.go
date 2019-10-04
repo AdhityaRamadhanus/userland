@@ -1,4 +1,4 @@
-// +build all service
+// +build all service profile
 
 package profile_test
 
@@ -205,21 +205,29 @@ func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
 	}
 }
 
-// func TestChangeEmailIntegration(t *testing.T) {
-// 	testCases := []struct {
-// 		NewEmail string
-// 		UserID   int
-// 	}{
-// 		{
-// 			UserID:   currentUserID,
-// 			NewEmail: "adhitya.ice@housecorp.com",
-// 		},
-// 	}
+func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
 
-// 	for _, testCase := range testCases {
-// 		user, _ := profileService.Profile(testCase.UserID)
-// 		verificationID, _ := profileService.RequestChangeEmail(user, testCase.NewEmail)
-// 		err := profileService.ChangeEmail(user, verificationID)
-// 		assert.Nil(t, err)
-// 	}
-// }
+	testCases := []struct {
+		NewEmail string
+		UserID   int
+	}{
+		{
+			UserID:   lastUserID,
+			NewEmail: "adhitya.ice@housecorp.com",
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		verificationID, _ := suite.ProfileService.RequestChangeEmail(user, testCase.NewEmail)
+		err := suite.ProfileService.ChangeEmail(user, verificationID)
+		suite.Nil(err)
+	}
+}

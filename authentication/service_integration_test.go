@@ -1,4 +1,4 @@
-// +build all service
+// +build all service authentication
 
 package authentication_test
 
