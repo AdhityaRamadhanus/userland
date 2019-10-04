@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
@@ -229,5 +230,110 @@ func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
 		verificationID, _ := suite.ProfileService.RequestChangeEmail(user, testCase.NewEmail)
 		err := suite.ProfileService.ChangeEmail(user, verificationID)
 		suite.Nil(err)
+	}
+}
+
+func (suite *ProfileServiceTestSuite) TestChangePasswordIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
+	testCases := []struct {
+		NewPassword string
+		OldPassword string
+		UserID      int
+		ExpectError bool
+	}{
+		{
+			UserID:      lastUserID,
+			OldPassword: "test123",
+			NewPassword: "test12345",
+			ExpectError: false,
+		},
+		{
+			UserID:      lastUserID,
+			OldPassword: "test1234",
+			NewPassword: "test12345",
+			ExpectError: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		err := suite.ProfileService.ChangePassword(user, testCase.OldPassword, testCase.NewPassword)
+		if testCase.ExpectError {
+			suite.NotNil(err)
+		} else {
+			suite.Nil(err)
+		}
+	}
+}
+
+func (suite *ProfileServiceTestSuite) TestEnrollTFA() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
+	testCases := []struct {
+		UserID      int
+		ExpectError bool
+	}{
+		{
+			UserID:      lastUserID,
+			ExpectError: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		_, _, err := suite.ProfileService.EnrollTFA(user)
+		if testCase.ExpectError {
+			suite.NotNil(err)
+		} else {
+			suite.Nil(err)
+		}
+	}
+}
+
+func (suite *ProfileServiceTestSuite) TestActivateTFA() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
+	testCases := []struct {
+		UserID      int
+		ExpectError bool
+	}{
+		{
+			UserID:      lastUserID,
+			ExpectError: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		secret, _, _ := suite.ProfileService.EnrollTFA(user)
+
+		tfaActivationKey := keygenerator.TFAActivationKey(user, secret)
+		code, _ := suite.KeyValueService.Get(tfaActivationKey)
+
+		err := suite.ProfileService.ActivateTFA(user, secret, string(code))
+		if testCase.ExpectError {
+			suite.NotNil(err)
+		} else {
+			suite.Nil(err)
+		}
 	}
 }
