@@ -10,20 +10,21 @@ import (
 )
 
 type UserScanStruct struct {
-	ID          int
-	Email       string
-	Fullname    string
-	Phone       sql.NullString
-	Location    sql.NullString
-	Bio         sql.NullString
-	WebURL      sql.NullString
-	PictureURL  sql.NullString
-	Password    string
-	TFAEnabled  sql.NullBool
-	Verified    sql.NullBool
-	BackupCodes pq.StringArray
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID           int
+	Email        string
+	Fullname     string
+	Phone        sql.NullString
+	Location     sql.NullString
+	Bio          sql.NullString
+	WebURL       sql.NullString
+	PictureURL   sql.NullString
+	Password     string
+	TFAEnabled   sql.NullBool
+	Verified     sql.NullBool
+	BackupCodes  pq.StringArray
+	TFAEnabledAt pq.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 /*
@@ -57,6 +58,7 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 				tfaenabled,
 				password,
 				backupcodes,
+				tfaenabledAt,
 				createdAt, 
 				updatedAt
 			FROM users 
@@ -89,6 +91,7 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 				tfaenabled,
 				password,
 				backupcodes,
+				tfaenabledAt,
 				createdAt, 
 				updatedAt
 			FROM users 
@@ -131,7 +134,6 @@ func (s UserRepository) Insert(user userland.User) error {
 				bio,
 				weburl,
 				pictureurl,
-				tfaenabled,
 				verified,
 				createdAt, 
 				updatedAt
@@ -144,7 +146,6 @@ func (s UserRepository) Insert(user userland.User) error {
 				:bio,
 				:weburl,
 				:pictureurl,
-				:tfaenabled,
 				:verified,
 				now(), 
 				now()
@@ -168,6 +169,7 @@ func (s UserRepository) Update(user userland.User) error {
 				pictureurl,
 				verified,
 				tfaenabled,
+				tfaenabledAt,
 				updatedAt
 			) = (
 				:email, 
@@ -180,6 +182,7 @@ func (s UserRepository) Update(user userland.User) error {
 				:pictureurl,
 				:verified,
 				:tfaenabled,
+				:tfaenabledat,
 				now()
 			) WHERE id=:id`
 
@@ -200,6 +203,8 @@ func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct)
 		Email:       userScanStruct.Email,
 		Password:    userScanStruct.Password,
 		BackupCodes: []string(userScanStruct.BackupCodes),
+		CreatedAt:   userScanStruct.CreatedAt,
+		UpdatedAt:   userScanStruct.UpdatedAt,
 	}
 
 	if userScanStruct.Phone.Valid {
@@ -222,6 +227,9 @@ func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct)
 	}
 	if userScanStruct.Verified.Valid {
 		user.Verified = userScanStruct.Verified.Bool
+	}
+	if userScanStruct.TFAEnabledAt.Valid {
+		user.TFAEnabledAt = userScanStruct.TFAEnabledAt.Time
 	}
 
 	return user
