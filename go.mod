@@ -20,6 +20,7 @@ require (
 	github.com/sebest/logrusly v0.0.0-20180315190218-3235eccb8edc
 	github.com/segmentio/go-loggly v0.5.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
+	github.com/skip2/go-qrcode v0.0.0-20190110000554-dc11ecdae0a9
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2

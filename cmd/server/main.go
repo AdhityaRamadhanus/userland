@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/AdhityaRamadhanus/userland/authentication"
+	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/server"
 	"github.com/AdhityaRamadhanus/userland/server/handlers"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
@@ -41,7 +42,10 @@ func main() {
 	// Repositories
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
+	eventRepository := postgres.NewEventRepository(db)
+
 	authenticationService := authentication.NewService(userRepository, keyValueService)
+	profileService := profile.NewService(eventRepository, userRepository, keyValueService)
 
 	authenticator := middlewares.NewAuthenticator(keyValueService)
 	healthHandler := handlers.HealthzHandler{}
@@ -49,9 +53,14 @@ func main() {
 		Authenticator:         authenticator,
 		AuthenticationService: authenticationService,
 	}
+	profileHandler := handlers.ProfileHandler{
+		Authenticator:  authenticator,
+		ProfileService: profileService,
+	}
 	handlers := []server.Handler{
 		healthHandler,
 		authenticationHandler,
+		profileHandler,
 	}
 
 	server := server.NewServer(handlers)
