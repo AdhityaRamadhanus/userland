@@ -28,17 +28,22 @@ type Service interface {
 	ChangeEmail(user userland.User, verificationID string) error
 	ChangePassword(user userland.User, oldPassword, newPassword string) error
 	EnrollTFA(user userland.User) (secret string, qrcodeImageBase64 string, err error)
-	ActivateTFA(user userland.User, secret string, code string) error
+	ActivateTFA(user userland.User, secret string, code string) ([]string, error)
+	RemoveTFA(user userland.User, currPassword string) error
+	DeleteAccount(user userland.User, currPassword string) error
+	ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error)
 }
 
-func NewService(userRepository userland.UserRepository, keyValueService userland.KeyValueService) Service {
+func NewService(eventRepository userland.EventRepository, userRepository userland.UserRepository, keyValueService userland.KeyValueService) Service {
 	return &service{
+		eventRepository: eventRepository,
 		userRepository:  userRepository,
 		keyValueService: keyValueService,
 	}
 }
 
 type service struct {
+	eventRepository userland.EventRepository
 	userRepository  userland.UserRepository
 	keyValueService userland.KeyValueService
 }
@@ -112,23 +117,65 @@ func (s *service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase6
 	return secret, qrcodeImageBase64, nil
 }
 
-func (s *service) ActivateTFA(user userland.User, secret string, code string) error {
+func (s *service) ActivateTFA(user userland.User, secret string, code string) ([]string, error) {
 	if user.TFAEnabled {
-		return ErrTFAAlreadyEnabled
+		return nil, ErrTFAAlreadyEnabled
 	}
 
 	tfaActivationKey := keygenerator.TFAActivationKey(user, secret)
 	expectedCode, err := s.keyValueService.Get(tfaActivationKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if string(expectedCode) != code {
-		return ErrWrongOTP
+		return nil, ErrWrongOTP
 	}
 
+	// create 5 backup codes
+	backupCodes := []string{}
+	user.BackupCodes = []string{}
+	for i := 0; i < 5; i++ {
+		code, _ := security.GenerateOTP(6)
+		backupCodes = append(backupCodes, code)
+		user.BackupCodes = append(user.BackupCodes, security.HashPassword(code))
+	}
 	user.TFAEnabled = true
 	user.TFAEnabledAt = time.Now()
+
+	err = s.userRepository.StoreBackupCodes(user)
+	if err != nil {
+		return nil, err
+	}
+	err = s.userRepository.Update(user)
+
 	defer s.keyValueService.Delete(tfaActivationKey)
+	return backupCodes, err
+}
+
+func (s *service) RemoveTFA(user userland.User, currPassword string) error {
+	if err := security.ComparePassword(user.Password, currPassword); err != nil {
+		return ErrWrongPassword
+	}
+
+	user.TFAEnabled = false
 	return s.userRepository.Update(user)
+}
+
+func (s *service) DeleteAccount(user userland.User, currPassword string) error {
+	if err := security.ComparePassword(user.Password, currPassword); err != nil {
+		return ErrWrongPassword
+	}
+
+	// should do in background
+	// delete user events
+	if err := s.eventRepository.DeleteAllByUserID(user.ID); err != nil {
+		return err
+	}
+
+	return s.userRepository.Delete(user.ID)
+}
+
+func (s *service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error) {
+	return s.eventRepository.FindAllByUserID(user.ID, pagingOptions)
 }

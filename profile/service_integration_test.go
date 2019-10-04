@@ -26,6 +26,7 @@ type ProfileServiceTestSuite struct {
 	suite.Suite
 	DB              *sqlx.DB
 	RedisClient     *_redis.Client
+	EventRepository *postgres.EventRepository
 	UserRepository  *postgres.UserRepository
 	KeyValueService *redis.KeyValueService
 	ProfileService  profile.Service
@@ -74,12 +75,14 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 	}
 
 	keyValueService := redis.NewKeyValueService(redisClient)
+	eventRepository := postgres.NewEventRepository(db)
 	userRepository := postgres.NewUserRepository(db)
-	profileService := profile.NewService(userRepository, keyValueService)
+	profileService := profile.NewService(eventRepository, userRepository, keyValueService)
 
 	suite.DB = db
 	suite.RedisClient = redisClient
 	suite.KeyValueService = keyValueService
+	suite.EventRepository = eventRepository
 	suite.UserRepository = userRepository
 	suite.ProfileService = profileService
 }
@@ -329,7 +332,76 @@ func (suite *ProfileServiceTestSuite) TestActivateTFA() {
 		tfaActivationKey := keygenerator.TFAActivationKey(user, secret)
 		code, _ := suite.KeyValueService.Get(tfaActivationKey)
 
-		err := suite.ProfileService.ActivateTFA(user, secret, string(code))
+		_, err := suite.ProfileService.ActivateTFA(user, secret, string(code))
+		if testCase.ExpectError {
+			suite.NotNil(err)
+		} else {
+			suite.Nil(err)
+		}
+	}
+}
+
+func (suite *ProfileServiceTestSuite) TestRemoveTFA() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
+	testCases := []struct {
+		UserID      int
+		Password    string
+		ExpectError bool
+	}{
+		{
+			UserID:      lastUserID,
+			Password:    "test123",
+			ExpectError: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		err := suite.ProfileService.RemoveTFA(user, testCase.Password)
+		if testCase.ExpectError {
+			suite.NotNil(err)
+		} else {
+			suite.Nil(err)
+		}
+	}
+}
+
+func (suite *ProfileServiceTestSuite) TestDeleteAccount() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
+	testCases := []struct {
+		UserID      int
+		Password    string
+		ExpectError bool
+	}{
+		{
+			UserID:      lastUserID,
+			Password:    "test1234",
+			ExpectError: true,
+		},
+		{
+			UserID:      lastUserID,
+			Password:    "test123",
+			ExpectError: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		err := suite.ProfileService.DeleteAccount(user, testCase.Password)
 		if testCase.ExpectError {
 			suite.NotNil(err)
 		} else {
