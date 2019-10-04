@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/profile"
@@ -22,41 +21,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	userRepository  *postgres.UserRepository
-	keyValueService *redis.KeyValueService
-	profileService  profile.Service
+type ProfileServiceTestSuite struct {
+	suite.Suite
+	DB              *sqlx.DB
+	RedisClient     *_redis.Client
+	UserRepository  *postgres.UserRepository
+	KeyValueService *redis.KeyValueService
+	ProfileService  profile.Service
 	currentUserID   int
-)
+}
 
-func Setup(db *sqlx.DB, redisClient *_redis.Client) {
-	_, err := db.Query("DELETE FROM users")
+func (suite *ProfileServiceTestSuite) SetupTest() {
+	_, err := suite.DB.Query("DELETE FROM users")
 	if err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
 
-	row := db.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
-		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@icehousecorp.com', $1, now(), now()) RETURNING id`,
-		security.HashPassword("test123"),
-	)
-
-	row = db.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
-		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
-		security.HashPassword("test123"),
-	)
-	row.Scan(&currentUserID)
-
-	err = redisClient.FlushAll().Err()
+	err = suite.RedisClient.FlushAll().Err()
 	if err != nil {
 		log.Fatal("Cannot setup redis")
 	}
-
-	time.Sleep(time.Second * 2)
 }
 
-func TestMain(m *testing.M) {
+func (suite *ProfileServiceTestSuite) SetupSuite() {
 	godotenv.Load("../.env")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
@@ -75,43 +62,74 @@ func TestMain(m *testing.M) {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
-	Setup(db, redisClient)
+	_, err = db.Query("DELETE FROM users")
+	if err != nil {
+		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
+	}
 
-	// Repositories
-	keyValueService = redis.NewKeyValueService(redisClient)
-	userRepository = postgres.NewUserRepository(db)
-	profileService = profile.NewService(userRepository, keyValueService)
+	err = redisClient.FlushAll().Err()
+	if err != nil {
+		log.Fatal("Cannot setup redis")
+	}
 
-	code := m.Run()
-	os.Exit(code)
+	keyValueService := redis.NewKeyValueService(redisClient)
+	userRepository := postgres.NewUserRepository(db)
+	profileService := profile.NewService(userRepository, keyValueService)
+
+	suite.DB = db
+	suite.RedisClient = redisClient
+	suite.KeyValueService = keyValueService
+	suite.UserRepository = userRepository
+	suite.ProfileService = profileService
 }
 
-func TestProfileIntegration(t *testing.T) {
+func TestProfileService(t *testing.T) {
+	suiteTest := new(ProfileServiceTestSuite)
+	suite.Run(t, suiteTest)
+}
+
+func (suite *ProfileServiceTestSuite) TestProfileIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
 	testCases := []struct {
 		UserID      int
 		ExpectError bool
 	}{
 		{
-			UserID:      currentUserID,
+			UserID:      lastUserID,
 			ExpectError: false,
 		},
 		{
-			UserID:      currentUserID + 1,
+			UserID:      lastUserID + 1,
 			ExpectError: true,
 		},
 	}
 
 	for _, testCase := range testCases {
-		_, err := profileService.Profile(testCase.UserID)
+		_, err := suite.ProfileService.Profile(testCase.UserID)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestSetProfileIntegration(t *testing.T) {
+func (suite *ProfileServiceTestSuite) TestSetProfileIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
 	testCases := []struct {
 		Fullname string
 		Location string
@@ -120,74 +138,88 @@ func TestSetProfileIntegration(t *testing.T) {
 		UserID   int
 	}{
 		{
-			UserID:   currentUserID,
+			UserID:   lastUserID,
 			Fullname: "Awesome User",
 			Location: "Jakarta, Indonesia",
 			Bio:      "My Short Bio",
 			Web:      "https://example.com",
 		},
 		{
-			UserID: currentUserID + 1,
+			UserID: lastUserID + 1,
 		},
 	}
 
 	for _, testCase := range testCases {
-		user, _ := profileService.Profile(testCase.UserID)
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
 
 		user.Fullname = testCase.Fullname
 		user.Location = testCase.Location
 		user.Bio = testCase.Bio
 		user.WebURL = testCase.Web
 
-		err := profileService.SetProfile(user)
-		assert.Nil(t, err)
+		err := suite.ProfileService.SetProfile(user)
+		suite.Nil(err)
 	}
 }
 
-func TestRequestChangeEmailIntegration(t *testing.T) {
+func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@icehousecorp.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+
+	row = suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+
 	testCases := []struct {
 		NewEmail    string
 		UserID      int
 		ExpectError bool
 	}{
 		{
-			UserID:      currentUserID,
+			UserID:      lastUserID,
 			NewEmail:    "adhitya.ice@housecorp.com",
 			ExpectError: false,
 		},
 		{
-			UserID:      currentUserID,
+			UserID:      lastUserID,
 			NewEmail:    "adhitya.ramadhanus@icehousecorp.com",
 			ExpectError: true,
 		},
 	}
 
 	for _, testCase := range testCases {
-		user, _ := profileService.Profile(testCase.UserID)
-		_, err := profileService.RequestChangeEmail(user, testCase.NewEmail)
+		user, _ := suite.ProfileService.Profile(testCase.UserID)
+		_, err := suite.ProfileService.RequestChangeEmail(user, testCase.NewEmail)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestChangeEmailIntegration(t *testing.T) {
-	testCases := []struct {
-		NewEmail string
-		UserID   int
-	}{
-		{
-			UserID:   currentUserID,
-			NewEmail: "adhitya.ice@housecorp.com",
-		},
-	}
+// func TestChangeEmailIntegration(t *testing.T) {
+// 	testCases := []struct {
+// 		NewEmail string
+// 		UserID   int
+// 	}{
+// 		{
+// 			UserID:   currentUserID,
+// 			NewEmail: "adhitya.ice@housecorp.com",
+// 		},
+// 	}
 
-	for _, testCase := range testCases {
-		user, _ := profileService.Profile(testCase.UserID)
-		verificationID, _ := profileService.RequestChangeEmail(user, testCase.NewEmail)
-		err := profileService.ChangeEmail(user, verificationID)
-		assert.Nil(t, err)
-	}
-}
+// 	for _, testCase := range testCases {
+// 		user, _ := profileService.Profile(testCase.UserID)
+// 		verificationID, _ := profileService.RequestChangeEmail(user, testCase.NewEmail)
+// 		err := profileService.ChangeEmail(user, verificationID)
+// 		assert.Nil(t, err)
+// 	}
+// }

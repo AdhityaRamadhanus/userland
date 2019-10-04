@@ -34,7 +34,7 @@ type AuthenticationServiceTestSuite struct {
 }
 
 func (suite *AuthenticationServiceTestSuite) SetupTest() {
-	_, err := suite.DB.Query("DELETE FROM users")
+	_, err := suite.DB.Exec("DELETE FROM users")
 	if err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
@@ -47,7 +47,7 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 
 // Make sure that VariableThatShouldStartAtFive is set to five
 // before each test
-func (suite *AuthenticationServiceTestSuite) Setup() {
+func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	godotenv.Load("../.env")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
@@ -81,7 +81,6 @@ func (suite *AuthenticationServiceTestSuite) Setup() {
 // a normal test function and pass our suite to suite.Run
 func TestAuthenticationService(t *testing.T) {
 	suiteTest := new(AuthenticationServiceTestSuite)
-	suiteTest.Setup()
 	suite.Run(t, suiteTest)
 }
 
