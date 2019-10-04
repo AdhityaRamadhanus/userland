@@ -4,9 +4,9 @@ CREATE TABLE IF NOT EXISTS events (
     event varchar(255) NOT NULL,
     useragent TEXT,
     ip TEXT,
-    client_id int,
-    client_name TEXT,
-    timestamp TIMESTAMP,
+    clientid int,
+    clientname TEXT,
+    timestamp TIMESTAMP NOT NULL,
     createdAt TIMESTAMP
 );
 

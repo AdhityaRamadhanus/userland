@@ -28,6 +28,7 @@ type EventPagingOptions struct {
 
 //UserRepository provide an interface to get user entities
 type EventRepository interface {
-	FindAllByUserID(userID int, pagingOptions EventPagingOptions) (Events, error)
+	FindAllByUserID(userID int, pagingOptions EventPagingOptions) (Events, int, error)
 	Insert(event Event) error
+	DeleteAllByUserID(userID int) error
 }
