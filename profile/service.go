@@ -158,6 +158,8 @@ func (s *service) RemoveTFA(user userland.User, currPassword string) error {
 		return ErrWrongPassword
 	}
 
+	user.BackupCodes = []string{}
+	s.userRepository.StoreBackupCodes(user)
 	user.TFAEnabled = false
 	return s.userRepository.Update(user)
 }

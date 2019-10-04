@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,6 +33,10 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/email", authenticate(authorize(security.UserTokenScope, h.requestChangeEmail))).Methods("POST")
 	router.HandleFunc("/me/email", authenticate(authorize(security.UserTokenScope, h.changeEmail))).Methods("PATCH")
 	router.HandleFunc("/me/password", authenticate(authorize(security.UserTokenScope, h.changePassword))).Methods("POST")
+	router.HandleFunc("/me/tfa", authenticate(authorize(security.UserTokenScope, h.getTFAStatus))).Methods("GET")
+	router.HandleFunc("/me/tfa/enroll", authenticate(authorize(security.UserTokenScope, h.enrollTFA))).Methods("GET")
+	router.HandleFunc("/me/tfa/enroll", authenticate(authorize(security.UserTokenScope, h.activateTFA))).Methods("POST")
+	router.HandleFunc("/me/tfa/remove", authenticate(authorize(security.UserTokenScope, h.removeTFA))).Methods("POST")
 }
 
 func (h *ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {
@@ -315,6 +320,179 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	if err = h.ProfileService.ChangePassword(user, changePasswordRequest.CurrentPassword, changePasswordRequest.NewPassword); err != nil {
 		log.WithFields(log.Fields{
 			"request":      changePasswordRequest,
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Change Email User")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"success": true,
+	})
+}
+
+func (h *ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	response := map[string]interface{}{
+		"enabled_at": "",
+	}
+	if user.TFAEnabled {
+		response["enabled"] = true
+		response["enabled_at"] = user.TFAEnabledAt
+	}
+	render.JSON(res, http.StatusOK, response)
+}
+
+func (h *ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	secret, qrCodeImageBase64, err := h.ProfileService.EnrollTFA(user)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"secret": secret,
+		"qr":     fmt.Sprintf(`data:image/png;base64,%s`, qrCodeImageBase64),
+	})
+}
+
+func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		RenderError(res, ErrFailedToReadBody)
+		return
+	}
+
+	activateTFARequest := struct {
+		Secret string `json:"secret" valid:"required"`
+		Code   string `json:"code" valid:"required"`
+	}{}
+
+	// Deserialize
+	if err := json.Unmarshal(body, &activateTFARequest); err != nil {
+		RenderError(res, ErrFailedToUnmarshalJSON)
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	if ok, err := govalidator.ValidateStruct(activateTFARequest); !ok || err != nil {
+		RenderError(res, ErrInvalidRequest, err.Error())
+		return
+	}
+
+	backupCodes, err := h.ProfileService.ActivateTFA(user, activateTFARequest.Secret, activateTFARequest.Code)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"backup_codes": backupCodes,
+	})
+}
+
+func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"client":       req.Header.Get("X-API-ClientID"),
+			"x-request-id": req.Header.Get("X-Request-ID"),
+		}).WithError(err).Error("Error Handler Get Email")
+
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	// Read Body, limit to 1 MB //
+	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		RenderError(res, ErrFailedToReadBody)
+		return
+	}
+
+	removeTFARequest := struct {
+		CurrentPassword string `json:"password" valid:"required"`
+	}{}
+
+	// Deserialize
+	if err := json.Unmarshal(body, &removeTFARequest); err != nil {
+		RenderError(res, ErrFailedToUnmarshalJSON)
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		RenderError(res, ErrSomethingWrong)
+		return
+	}
+
+	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
+		RenderError(res, ErrInvalidRequest, err.Error())
+		return
+	}
+
+	if err = h.ProfileService.RemoveTFA(user, removeTFARequest.CurrentPassword); err != nil {
+		log.WithFields(log.Fields{
+			"request":      removeTFARequest,
 			"client":       req.Header.Get("X-API-ClientID"),
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Change Email User")
