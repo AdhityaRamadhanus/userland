@@ -64,16 +64,6 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
-	_, err = db.Query("DELETE FROM users")
-	if err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
-	}
-
-	err = redisClient.FlushAll().Err()
-	if err != nil {
-		log.Fatal("Cannot setup redis")
-	}
-
 	keyValueService := redis.NewKeyValueService(redisClient)
 	eventRepository := postgres.NewEventRepository(db)
 	userRepository := postgres.NewUserRepository(db)
@@ -83,7 +73,6 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 	suite.RedisClient = redisClient
 	suite.KeyValueService = keyValueService
 	suite.EventRepository = eventRepository
-	suite.UserRepository = userRepository
 	suite.ProfileService = profileService
 }
 
@@ -95,7 +84,7 @@ func TestProfileService(t *testing.T) {
 func (suite *ProfileServiceTestSuite) TestProfileIntegration() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -128,7 +117,7 @@ func (suite *ProfileServiceTestSuite) TestProfileIntegration() {
 func (suite *ProfileServiceTestSuite) TestSetProfileIntegration() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -169,13 +158,13 @@ func (suite *ProfileServiceTestSuite) TestSetProfileIntegration() {
 func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@icehousecorp.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
 
 	row = suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -212,7 +201,7 @@ func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
 func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -239,7 +228,7 @@ func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
 func (suite *ProfileServiceTestSuite) TestChangePasswordIntegration() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -279,7 +268,7 @@ func (suite *ProfileServiceTestSuite) TestChangePasswordIntegration() {
 func (suite *ProfileServiceTestSuite) TestEnrollTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -309,7 +298,7 @@ func (suite *ProfileServiceTestSuite) TestEnrollTFA() {
 func (suite *ProfileServiceTestSuite) TestActivateTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -344,7 +333,7 @@ func (suite *ProfileServiceTestSuite) TestActivateTFA() {
 func (suite *ProfileServiceTestSuite) TestRemoveTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
@@ -376,7 +365,7 @@ func (suite *ProfileServiceTestSuite) TestRemoveTFA() {
 func (suite *ProfileServiceTestSuite) TestDeleteAccount() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
 		security.HashPassword("test123"),
 	)
