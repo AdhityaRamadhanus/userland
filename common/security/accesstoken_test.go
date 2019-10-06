@@ -1,4 +1,4 @@
-// +build all common
+// +build all common unit
 
 package security_test
 
@@ -24,9 +24,7 @@ func TestCreateAccessToken(t *testing.T) {
 			},
 			Options: security.AccessTokenOptions{
 				Expiration: 60 * time.Second * 5,
-				Scope: []string{
-					"user",
-				},
+				Scope:      security.UserTokenScope,
 			},
 		},
 	}
