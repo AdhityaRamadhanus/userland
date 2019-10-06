@@ -29,7 +29,7 @@ func NewServer(Handlers []Handler) *Server {
 
 	return &Server{
 		Router: router,
-		Port:   os.Getenv("PORT"),
+		Port:   os.Getenv("USERLAND_PORT"),
 	}
 }
 
@@ -45,7 +45,7 @@ func (s *Server) CreateHttpServer() *http.Server {
 				),
 			),
 		),
-		Addr:         ":" + os.Getenv("PORT"),
+		Addr:         ":" + os.Getenv("USERLAND_PORT"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}

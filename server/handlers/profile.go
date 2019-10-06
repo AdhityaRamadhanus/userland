@@ -107,7 +107,7 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 	}
 
 	if ok, err := govalidator.ValidateStruct(updateProfileRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -196,7 +196,7 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 	}
 
 	if ok, err := govalidator.ValidateStruct(changeEmailRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -254,7 +254,7 @@ func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request)
 	}
 
 	if ok, err := govalidator.ValidateStruct(changeEmailRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -314,7 +314,7 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	}
 
 	if ok, err := govalidator.ValidateStruct(changePasswordRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -429,7 +429,7 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 	}
 
 	if ok, err := govalidator.ValidateStruct(activateTFARequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -487,7 +487,7 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -545,7 +545,7 @@ func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Reques
 	}
 
 	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 

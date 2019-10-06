@@ -62,7 +62,7 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 	}
 
 	if ok, err := govalidator.ValidateStruct(registerUserRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 	}
 
 	if ok, err := govalidator.ValidateStruct(requestVerificationRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyAccountRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 	}
 
 	if ok, err := govalidator.ValidateStruct(loginRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -259,7 +259,7 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 	}
 
 	if ok, err := govalidator.ValidateStruct(forgotPasswordRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -307,7 +307,7 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 	}
 
 	if ok, err := govalidator.ValidateStruct(resetPasswordRequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -355,7 +355,7 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyTFARequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 
@@ -407,7 +407,7 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyTFARequest); !ok || err != nil {
-		RenderError(res, ErrInvalidRequest, err.Error())
+		RenderInvalidRequestError(res, err)
 		return
 	}
 

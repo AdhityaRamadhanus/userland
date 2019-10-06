@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/asaskevich/govalidator"
 )
 
 var (
@@ -18,6 +19,17 @@ var (
 	//ErrInvalidRequest request body processing error
 	ErrInvalidRequest = errors.New("Invalid Request Against this endpoint")
 )
+
+func RenderInvalidRequestError(res http.ResponseWriter, err error) error {
+	fieldsError := govalidator.ErrorsByField(err)
+	return render.JSON(res, http.StatusUnprocessableEntity, map[string]interface{}{
+		"status": http.StatusUnprocessableEntity,
+		"error": map[string]interface{}{
+			"code":   "ErrInvalidRequest",
+			"fields": fieldsError,
+		},
+	})
+}
 
 //RenderError help handler create a consistent error response
 func RenderError(res http.ResponseWriter, err error, customMessages ...string) error {
@@ -48,14 +60,6 @@ func RenderError(res http.ResponseWriter, err error, customMessages ...string) e
 			"status": http.StatusInternalServerError,
 			"error": map[string]interface{}{
 				"code":    "ErrInternalServer",
-				"message": errorMessage,
-			},
-		})
-	case ErrInvalidRequest:
-		return render.JSON(res, 422, map[string]interface{}{
-			"status": 422,
-			"error": map[string]interface{}{
-				"code":    "ErrInvalidRequest",
 				"message": errorMessage,
 			},
 		})
