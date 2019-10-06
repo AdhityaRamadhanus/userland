@@ -5,15 +5,15 @@ CREATE TABLE IF NOT EXISTS users (
     phone varchar(255),
     location varchar(255),
     bio varchar(255),
-    weburl varchar(255),
-    pictureurl varchar(255),
-    tfaenabled boolean,
+    web_url varchar(255),
+    picture_url varchar(255),
+    tfa_enabled boolean,
     verified boolean,
     password TEXT NOT NULL,
-    backupcodes text[],
-    tfaenabledAt TIMESTAMP,
-    createdAt TIMESTAMP,
-    updatedAt TIMESTAMP,
+    backup_codes text[],
+    tfa_enabled_at TIMESTAMP,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
 
 	CONSTRAINT users_unique_email UNIQUE (email)
 );

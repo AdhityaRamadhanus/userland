@@ -16,15 +16,15 @@ type UserScanStruct struct {
 	Phone        sql.NullString
 	Location     sql.NullString
 	Bio          sql.NullString
-	WebURL       sql.NullString
-	PictureURL   sql.NullString
+	WebURL       sql.NullString `db:"web_url"`
+	PictureURL   sql.NullString `db:"picture_url"`
 	Password     string
-	TFAEnabled   sql.NullBool
+	TFAEnabled   sql.NullBool `db:"tfa_enabled"`
 	Verified     sql.NullBool
-	BackupCodes  pq.StringArray
-	TFAEnabledAt pq.NullTime
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	BackupCodes  pq.StringArray `db:"backup_codes"`
+	TFAEnabledAt pq.NullTime    `db:"tfa_enabled_at"`
+	CreatedAt    time.Time      `db:"created_at"`
+	UpdatedAt    time.Time      `db:"updated_at"`
 }
 
 /*
@@ -52,15 +52,15 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 				phone, 
 				location,
 				bio,
-				weburl,
-				pictureurl,
+				web_url,
+				picture_url,
 				verified,
-				tfaenabled,
+				tfa_enabled,
 				password,
-				backupcodes,
-				tfaenabledAt,
-				createdAt, 
-				updatedAt
+				backup_codes,
+				tfa_enabled_at,
+				created_at, 
+				updated_at
 			FROM users 
 			WHERE id=$1`
 	err = s.db.Get(&userScanStruct, query, id)
@@ -85,15 +85,15 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 				phone, 
 				location,
 				bio,
-				weburl,
-				pictureurl,
+				web_url,
+				picture_url,
 				verified,
-				tfaenabled,
+				tfa_enabled,
 				password,
-				backupcodes,
-				tfaenabledAt,
-				createdAt, 
-				updatedAt
+				backup_codes,
+				tfa_enabled_at,
+				created_at, 
+				updated_at
 			FROM users 
 			WHERE email=$1`
 
@@ -132,11 +132,11 @@ func (s UserRepository) Insert(user userland.User) error {
 				location,
 				password,
 				bio,
-				weburl,
-				pictureurl,
+				web_url,
+				picture_url,
 				verified,
-				createdAt, 
-				updatedAt
+				created_at, 
+				updated_at
 			) VALUES (
 				:email, 
 				:fullname, 
@@ -164,13 +164,13 @@ func (s UserRepository) Update(user userland.User) error {
 				phone,
 				location,
 				bio,
-				weburl,
+				web_url,
 				password,
-				pictureurl,
+				picture_url,
 				verified,
-				tfaenabled,
-				tfaenabledAt,
-				updatedAt
+				tfa_enabled,
+				tfa_enabled_at,
+				updated_at
 			) = (
 				:email, 
 				:fullname,
@@ -191,7 +191,7 @@ func (s UserRepository) Update(user userland.User) error {
 }
 
 func (s UserRepository) StoreBackupCodes(user userland.User) error {
-	query := `UPDATE users SET (backupcodes, updatedAt) = ($2, now()) WHERE id=$1`
+	query := `UPDATE users SET (backup_codes, updated_at) = ($2, now()) WHERE id=$1`
 	_, err := s.db.Query(query, user.ID, pq.Array(user.BackupCodes))
 	return err
 }
