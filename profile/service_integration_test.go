@@ -47,6 +47,7 @@ func (suite *ProfileServiceTestSuite) SetupTest() {
 
 func (suite *ProfileServiceTestSuite) SetupSuite() {
 	godotenv.Load("../.env")
+	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {

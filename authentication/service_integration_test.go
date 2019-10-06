@@ -49,6 +49,7 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 // before each test
 func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	godotenv.Load("../.env")
+	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {
