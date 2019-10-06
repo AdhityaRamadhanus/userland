@@ -3,6 +3,7 @@
 package postgres_test
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ func (suite *EventRepositoryTestSuite) SetupTest() {
 
 func (suite *EventRepositoryTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
+	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {

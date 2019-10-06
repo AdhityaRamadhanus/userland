@@ -3,6 +3,7 @@
 package postgres_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -32,6 +33,7 @@ func (suite *UserRepositoryTestSuite) SetupTest() {
 
 func (suite *UserRepositoryTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
+	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {
