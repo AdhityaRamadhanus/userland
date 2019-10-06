@@ -11,14 +11,14 @@ import (
 
 type EventScanStruct struct {
 	ID         int
-	UserID     int
+	UserID     int `db:"user_id"`
 	Event      string
-	UserAgent  sql.NullString
+	UserAgent  sql.NullString `db:"user_agent"`
 	IP         sql.NullString
-	ClientID   int
-	ClientName string
+	ClientID   int    `db:"client_id"`
+	ClientName string `db:"client_name"`
 	Timestamp  time.Time
-	CreatedAt  time.Time
+	CreatedAt  time.Time `db:"created_at"`
 }
 
 /*
@@ -42,16 +42,16 @@ func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagin
 	selectQuery := fmt.Sprintf(
 		`SELECT
 			id,
-			userid, 
+			user_id, 
 			event, 
-			useragent,
+			user_agent,
 			ip,
-			clientid,
-			clientname,
+			client_id,
+			client_name,
 			timestamp,
-			createdAt
+			created_at
 		FROM events 
-		WHERE userid=$1
+		WHERE user_id=$1
 		ORDER BY %s %s 
 		LIMIT %d 
 		OFFSET %d`,
@@ -65,7 +65,7 @@ func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagin
 		return userland.Events{}, 0, err
 	}
 
-	countQuery := `SELECT count(*) FROM events WHERE userid=$1`
+	countQuery := `SELECT count(*) FROM events WHERE user_id=$1`
 	row := e.db.QueryRow(countQuery, userID)
 	row.Scan(&eventsCount)
 
@@ -77,7 +77,7 @@ func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagin
 }
 
 func (s EventRepository) DeleteAllByUserID(userID int) error {
-	query := `DELETE FROM events where userid=$1`
+	query := `DELETE FROM events where user_id=$1`
 
 	deleteStatement, err := s.db.Prepare(query)
 	if err != nil {
@@ -91,14 +91,14 @@ func (s EventRepository) DeleteAllByUserID(userID int) error {
 
 func (e EventRepository) Insert(event userland.Event) error {
 	query := `INSERT INTO events (
-				userid, 
+				user_id,
 				event, 
-				useragent, 
+				user_agent,
 				ip,
-				clientid,
-				clientname,
+				client_id,
+				client_name,
 				timestamp,
-				createdAt
+				created_at
 			) VALUES (
 				:userid, 
 				:event, 
@@ -108,7 +108,7 @@ func (e EventRepository) Insert(event userland.Event) error {
 				:clientname,
 				:timestamp,
 				now()
-			) RETURNING id`
+			)`
 
 	_, err := e.db.NamedQuery(query, event)
 	return err

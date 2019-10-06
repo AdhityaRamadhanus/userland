@@ -51,8 +51,8 @@ func TestEventRepository(t *testing.T) {
 
 func (suite *EventRepositoryTestSuite) TestFindAllByUserID() {
 	userID := 1
-	suite.DB.QueryRow(`INSERT INTO events (userid, event, clientid, clientname, timestamp, createdAt) VALUES ($1, 'authentication.login', 1, 'userland-app', now(), now())`, userID)
-	suite.DB.QueryRow(`INSERT INTO events (userid, event, clientid, clientname, timestamp, createdAt) VALUES ($1, 'authentication.tfa', 1, 'userland-app', now(), now())`, userID)
+	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES ($1, 'authentication.login', 1, 'userland-app', now(), now())`, userID)
+	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES ($1, 'authentication.tfa', 1, 'userland-app', now(), now())`, userID)
 
 	testCases := []struct {
 		PagingOptions userland.EventPagingOptions
@@ -102,8 +102,8 @@ func (suite *EventRepositoryTestSuite) TestInsert() {
 
 func (suite *EventRepositoryTestSuite) TestDeletAllByUserID() {
 	userID := 1
-	suite.DB.QueryRow(`INSERT INTO events (userid, event, clientid, clientname, timestamp, createdAt) VALUES ($1, 'authentication.login', 1, 'userland-app', now(), now())`, userID)
-	suite.DB.QueryRow(`INSERT INTO events (userid, event, clientid, clientname, timestamp, createdAt) VALUES ($1, 'authentication.tfa', 1, 'userland-app', now(), now())`, userID)
+	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES ($1, 'authentication.login', 1, 'userland-app', now(), now())`, userID)
+	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES ($1, 'authentication.tfa', 1, 'userland-app', now(), now())`, userID)
 
 	err := suite.EventRepository.DeleteAllByUserID(userID)
 	suite.Nil(err)
