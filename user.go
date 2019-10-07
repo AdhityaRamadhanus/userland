@@ -26,6 +26,7 @@ type User struct {
 
 var (
 	ErrUserNotFound = errors.New("User not found")
+	ErrDuplicateKey = errors.New("Duplicate key in user")
 )
 
 //UserRepository provide an interface to get user entities
