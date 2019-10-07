@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/AdhityaRamadhanus/userland/server/render"
 	"github.com/asaskevich/govalidator"
@@ -31,45 +30,32 @@ func RenderInvalidRequestError(res http.ResponseWriter, err error) error {
 	})
 }
 
-//RenderError help handler create a consistent error response
-func RenderError(res http.ResponseWriter, err error, customMessages ...string) error {
-	errorMessage := err.Error()
-	if len(customMessages) > 0 {
-		errorMessage = strings.Join(customMessages, " ")
-	}
+func RenderFailedToReadBodyError(res http.ResponseWriter, err error) error {
+	return render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
+		"status": http.StatusInternalServerError,
+		"error": map[string]interface{}{
+			"code":    "ErrFailedToReadBody",
+			"message": err.Error(),
+		},
+	})
+}
 
-	switch err {
-	case ErrFailedToReadBody:
-		return render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-			"status": http.StatusInternalServerError,
-			"error": map[string]interface{}{
-				"code":    "ErrFailedToReadBody",
-				"message": errorMessage,
-			},
-		})
-	case ErrFailedToUnmarshalJSON:
-		return render.JSON(res, http.StatusBadRequest, map[string]interface{}{
-			"status": http.StatusBadRequest,
-			"error": map[string]interface{}{
-				"code":    "ErrFailedToUnmarshalJSON",
-				"message": errorMessage,
-			},
-		})
-	case ErrSomethingWrong:
-		return render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-			"status": http.StatusInternalServerError,
-			"error": map[string]interface{}{
-				"code":    "ErrInternalServer",
-				"message": errorMessage,
-			},
-		})
-	default:
-		return render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-			"status": http.StatusInternalServerError,
-			"error": map[string]interface{}{
-				"code":    "ErrInternalServer",
-				"message": errorMessage,
-			},
-		})
-	}
+func RenderFailedToUnmarshalJSONError(res http.ResponseWriter, err error) error {
+	return render.JSON(res, http.StatusBadRequest, map[string]interface{}{
+		"status": http.StatusBadRequest,
+		"error": map[string]interface{}{
+			"code":    "ErrFailedToUnmarshalJSON",
+			"message": err.Error(),
+		},
+	})
+}
+
+func RenderInternalServerError(res http.ResponseWriter, err error) error {
+	return render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
+		"status": http.StatusInternalServerError,
+		"error": map[string]interface{}{
+			"code":    "ErrInternalServer",
+			"message": err.Error(),
+		},
+	})
 }

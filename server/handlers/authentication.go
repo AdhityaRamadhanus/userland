@@ -39,7 +39,7 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -52,12 +52,12 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 
 	// Deserialize
 	if err := json.Unmarshal(body, &registerUserRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Register User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -103,12 +103,12 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 
 	// Deserialize
 	if err := json.Unmarshal(body, &requestVerificationRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Request Verification User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -149,12 +149,12 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyAccountRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -173,7 +173,7 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Verify Account User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -197,12 +197,12 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 
 	// Deserialize
 	if err := json.Unmarshal(body, &loginRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -221,7 +221,7 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Login User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -249,12 +249,12 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 
 	// Deserialize
 	if err := json.Unmarshal(body, &forgotPasswordRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Forgot Password User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -285,7 +285,7 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -297,12 +297,12 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 
 	// Deserialize
 	if err := json.Unmarshal(body, &resetPasswordRequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -319,7 +319,7 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Reset Password User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -335,7 +335,7 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -345,12 +345,12 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyTFARequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -367,7 +367,7 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Verify TFA User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -387,7 +387,7 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderError(res, ErrFailedToReadBody)
+		RenderFailedToReadBodyError(res, err)
 		return
 	}
 
@@ -397,12 +397,12 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyTFARequest); err != nil {
-		RenderError(res, ErrFailedToUnmarshalJSON)
+		RenderFailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
@@ -419,7 +419,7 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 			"x-request-id": req.Header.Get("X-Request-ID"),
 		}).WithError(err).Error("Error Handler Verify TFA Bypass User")
 
-		RenderError(res, ErrSomethingWrong)
+		RenderInternalServerError(res, err)
 		return
 	}
 
