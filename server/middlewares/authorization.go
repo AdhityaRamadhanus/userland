@@ -13,7 +13,7 @@ func Authorize(desiredTokenScope string, nextHandler http.HandlerFunc) http.Hand
 		accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 
 		if accessToken["scope"].(string) != desiredTokenScope { // invalid header
-			render.JSON(res, http.StatusUnauthorized, map[string]interface{}{
+			render.JSON(res, http.StatusForbidden, map[string]interface{}{
 				"status": http.StatusForbidden,
 				"error": map[string]interface{}{
 					"code":    "ErrForbiddenScope",

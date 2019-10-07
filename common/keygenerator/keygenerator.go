@@ -14,6 +14,10 @@ func TFAVerificationKey(user userland.User, uuid string) string {
 	return fmt.Sprintf("tfa-verification:%d:%s", user.ID, uuid)
 }
 
+func TFAActivationKey(user userland.User, uuid string) string {
+	return fmt.Sprintf("tfa-activation:%d:%s", user.ID, uuid)
+}
+
 func SessionKey(uuid string) string {
 	return fmt.Sprintf("session:%s", uuid)
 }

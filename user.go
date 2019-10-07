@@ -7,20 +7,21 @@ import (
 
 //User is domain entity
 type User struct {
-	ID          int
-	Email       string
-	Fullname    string
-	Phone       string
-	Location    string
-	Bio         string
-	WebURL      string
-	PictureURL  string
-	Password    string
-	TFAEnabled  bool
-	Verified    bool
-	BackupCodes []string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID           int
+	Email        string
+	Fullname     string
+	Phone        string
+	Location     string
+	Bio          string
+	WebURL       string
+	PictureURL   string
+	Password     string
+	TFAEnabled   bool
+	Verified     bool
+	BackupCodes  []string
+	TFAEnabledAt time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 var (

@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	_gcs "cloud.google.com/go/storage"
 	"github.com/AdhityaRamadhanus/userland/authentication"
+	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/server"
 	"github.com/AdhityaRamadhanus/userland/server/handlers"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
+	"github.com/AdhityaRamadhanus/userland/storage/gcs"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	_redis "github.com/go-redis/redis"
@@ -38,10 +42,20 @@ func main() {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
+	ctx := context.Background()
+	gcsClient, err := _gcs.NewClient(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Repositories
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
+	eventRepository := postgres.NewEventRepository(db)
+	objectStorageService := gcs.NewObjectStorageService(gcsClient, "userland_cdn")
+
 	authenticationService := authentication.NewService(userRepository, keyValueService)
+	profileService := profile.NewService(eventRepository, userRepository, keyValueService)
 
 	authenticator := middlewares.NewAuthenticator(keyValueService)
 	healthHandler := handlers.HealthzHandler{}
@@ -49,9 +63,15 @@ func main() {
 		Authenticator:         authenticator,
 		AuthenticationService: authenticationService,
 	}
+	profileHandler := handlers.ProfileHandler{
+		Authenticator:        authenticator,
+		ProfileService:       profileService,
+		ObjectStorageService: objectStorageService,
+	}
 	handlers := []server.Handler{
 		healthHandler,
 		authenticationHandler,
+		profileHandler,
 	}
 
 	server := server.NewServer(handlers)

@@ -7,13 +7,28 @@ VERSION ?= 1.0.0
 
 default: unit-test build
 
+build:
+	@echo "Setup userland"
+ifeq ($(OS),Linux)
+	@echo "Build userland..."
+	GOOS=linux  go build -ldflags "-s -w -X main.Version=$(VERSION)" -o userland cmd/server/main.go
+endif
+ifeq ($(OS) ,Darwin)
+	@echo "Build userland..."
+	GOOS=darwin go build -ldflags "-X main.Version=$(VERSION)" -o userland cmd/server/main.go
+endif
+	@echo "Succesfully Build for ${OS} version:= ${VERSION}"
+
+
 # Test Packages
 
 unit-test:
-	go test -count=1 -v -short --cover ./...
+	go test -count=1 -v --cover ./... -tags="unit"
 
 integration-test:
-	go test -count=1 -run Integration -v --cover ./...
+	@go test ./... -count=1 -v --cover -tags="authentication" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="profile" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="repository" | { grep -v 'no test files'; true; }
 
 migration:
 	go run script/run_migration/main.go

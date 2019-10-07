@@ -10,50 +10,48 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/AdhityaRamadhanus/userland"
+	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	userRepository *postgres.UserRepository
-)
+type UserRepositoryTestSuite struct {
+	suite.Suite
+	DB             *sqlx.DB
+	UserRepository userland.UserRepository
+}
 
-// make test kind of idempotent
-func Setup(db *sqlx.DB) {
-	_, err := db.Query("DELETE FROM users")
+func (suite *UserRepositoryTestSuite) SetupTest() {
+	_, err := suite.DB.Query("DELETE FROM users")
 	if err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
-
-	_, err = db.Query(
-		`INSERT INTO users (fullname, email, password, createdat, updatedat)
-		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', crypt('test123', gen_salt('bf')), now(), now())`)
-
-	if err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in filling users table"))
-	}
 }
 
-func TestMain(m *testing.M) {
+func (suite *UserRepositoryTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
+	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	Setup(db)
 	// Repositories
-	userRepository = postgres.NewUserRepository(db)
-
-	code := m.Run()
-	os.Exit(code)
+	userRepository := postgres.NewUserRepository(db)
+	suite.DB = db
+	suite.UserRepository = userRepository
 }
 
-func TestCreateUserIntegration(t *testing.T) {
+func TestUserRepository(t *testing.T) {
+	suiteTest := new(UserRepositoryTestSuite)
+	suite.Run(t, suiteTest)
+}
+
+func (suite *UserRepositoryTestSuite) TestCreateUserIntegration() {
 	testCases := []struct {
 		User        userland.User
 		ExpectError bool
@@ -68,7 +66,7 @@ func TestCreateUserIntegration(t *testing.T) {
 		},
 		{
 			User: userland.User{
-				Email:    "adhitya.ramadhanus@gmail.com",
+				Email:    "adhitya.ramadhanus@icehousecorp.com",
 				Fullname: "Adhitya Ramadhanus",
 				Password: "test123",
 			},
@@ -76,58 +74,81 @@ func TestCreateUserIntegration(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		err := userRepository.Insert(testCase.User)
+		err := suite.UserRepository.Insert(testCase.User)
 		if testCase.ExpectError {
-			assert.NotNil(t, err)
+			suite.NotNil(err)
 		} else {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		}
 	}
 }
 
-func TestFindUserByEmailIntegration(t *testing.T) {
-	email := "adhitya.ramadhanus@gmail.com"
-	user, err := userRepository.FindByEmail(email)
+func (suite *UserRepositoryTestSuite) TestFindUserByEmailIntegration() {
+	suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now())`,
+		security.HashPassword("test123"),
+	)
 
-	assert.Nil(t, err, "Failed to find user by email")
-	assert.Equal(t, user.Email, email)
+	email := "adhitya.ramadhanus@gmail.com"
+	user, err := suite.UserRepository.FindByEmail(email)
+
+	suite.Nil(err, "Failed to find user by email")
+	suite.Equal(user.Email, email)
 }
 
-func TestFindUserByIDIntegration(t *testing.T) {
-	email := "adhitya.ramadhanus@gmail.com"
-	user, err := userRepository.FindByEmail(email)
-
-	userID := user.ID
-	user, err = userRepository.Find(userID)
-
-	assert.Nil(t, err, "Failed to find user by id")
-	assert.Equal(t, user.ID, userID)
+func (suite *UserRepositoryTestSuite) TestFindUserByIDIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
+	_, err := suite.UserRepository.Find(lastUserID)
+	suite.Nil(err, "Failed to find user by id")
 }
 
-func TestUpdateUserByIDIntegration(t *testing.T) {
+func (suite *UserRepositoryTestSuite) TestUpdateUserByIDIntegration() {
 	email := "adhitya.ramadhanus@icehousecorp.com"
-	user, err := userRepository.FindByEmail(email)
+	suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
+		VALUES ('Adhitya Ramadhanus', $1, $2, now(), now()) RETURNING id`,
+		email,
+		security.HashPassword("test123"),
+	)
+	user, _ := suite.UserRepository.FindByEmail(email)
 
 	user.Phone = "0812567823823"
 	user.Bio = "Test Aja"
-	err = userRepository.Update(user)
-	assert.Nil(t, err, "Failed to update user by id")
+	err := suite.UserRepository.Update(user)
+	suite.Nil(err, "Failed to update user by id")
 }
 
-func TestStoreBackupCodesByIDIntegration(t *testing.T) {
+func (suite *UserRepositoryTestSuite) TestStoreBackupCodesByIDIntegration() {
 	email := "adhitya.ramadhanus@icehousecorp.com"
-	user, err := userRepository.FindByEmail(email)
+	suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
+		VALUES ('Adhitya Ramadhanus', $1, $2, now(), now()) RETURNING id`,
+		email,
+		security.HashPassword("test123"),
+	)
+	user, _ := suite.UserRepository.FindByEmail(email)
 
 	user.BackupCodes = []string{"xxx", "xxx"}
-	err = userRepository.StoreBackupCodes(user)
-	assert.Nil(t, err, "Failed to store backupd codes user")
+	err := suite.UserRepository.StoreBackupCodes(user)
+	suite.Nil(err, "Failed to store backupd codes user")
 }
 
-func TestDeleteUserByIDIntegration(t *testing.T) {
-	email := "adhitya.ramadhanus@gmail.com"
-	user, err := userRepository.FindByEmail(email)
+func (suite *UserRepositoryTestSuite) TestDeleteUserByIDIntegration() {
+	var lastUserID int
+	row := suite.DB.QueryRow(
+		`INSERT INTO users (fullname, email, password, created_at, updated_at)
+		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
+		security.HashPassword("test123"),
+	)
+	row.Scan(&lastUserID)
 
-	userID := user.ID
-	err = userRepository.Delete(userID)
-	assert.Nil(t, err, "Failed to delete user by id")
+	err := suite.UserRepository.Delete(lastUserID)
+	suite.Nil(err, "Failed to delete user by id")
 }
