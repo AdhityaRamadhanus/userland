@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	ErrUserRegistered        = errors.New("User already registered")
 	ErrUserNotVerified       = errors.New("User not verified")
 	ErrWrongPassword         = errors.New("Wrong password")
 	ErrServiceNotImplemented = errors.New("Service not implemented")
@@ -47,7 +48,13 @@ type service struct {
 
 func (s *service) Register(user userland.User) error {
 	user.Password = security.HashPassword(user.Password)
-	return s.userRepository.Insert(user)
+	if err := s.userRepository.Insert(user); err != nil {
+		if err == userland.ErrDuplicateKey {
+			return ErrUserRegistered
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *service) RequestVerification(verificationType string, email string) (verificationID string, err error) {

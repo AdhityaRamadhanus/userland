@@ -153,7 +153,13 @@ func (s UserRepository) Insert(user userland.User) error {
 
 	nstmt, err := s.db.PrepareNamed(query)
 	_, err = nstmt.Query(user)
-	return err
+	if err != nil {
+		if err.(*pq.Error).Code.Name() == "unique_violation" {
+			return userland.ErrDuplicateKey
+		}
+		return err
+	}
+	return nil
 }
 
 //Update update story
