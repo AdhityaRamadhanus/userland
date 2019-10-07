@@ -26,11 +26,15 @@ func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	authenticate := h.Authenticator.Authenticate
 	authorize := middlewares.Authorize
 	router.HandleFunc("/auth/register", h.registerUser).Methods("POST")
+
 	router.HandleFunc("/auth/verification", h.requestVerification).Methods("POST")
 	router.HandleFunc("/auth/verification", h.verifyAccount).Methods("PATCH")
+
 	router.HandleFunc("/auth/login", h.login).Methods("POST")
+
 	router.HandleFunc("/auth/password/forgot", h.forgotPassword).Methods("POST")
 	router.HandleFunc("/auth/password/reset", h.resetPassword).Methods("POST")
+
 	router.HandleFunc("/auth/tfa/verify", authenticate(authorize(security.TFATokenScope, h.verifyTFA))).Methods("POST")
 	router.HandleFunc("/auth/tfa/bypass", authenticate(authorize(security.TFATokenScope, h.verifyTFABypass))).Methods("POST")
 }
@@ -44,16 +48,22 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 	}
 
 	registerUserRequest := struct {
-		Fullname          string `json:"fullname" valid:"required"`
-		Email             string `json:"email" valid:"required"`
-		Password          string `json:"password" valid:"required"`
-		ConfirmedPassword string `json:"password_confirmed" valid:"required"`
+		Fullname          string `json:"fullname" valid:"required,stringlength(1|128)"`
+		Email             string `json:"email" valid:"required,email,stringlength(1|128)"`
+		Password          string `json:"password" valid:"required,stringlength(6|128)"`
+		ConfirmedPassword string `json:"password_confirmed" valid:"required,stringlength(6|128)"`
+		PasswordSame      string `valid:"required~Password should be same"`
 	}{}
 
 	// Deserialize
 	if err := json.Unmarshal(body, &registerUserRequest); err != nil {
 		RenderFailedToUnmarshalJSONError(res, err)
 		return
+	}
+
+	//hack
+	if registerUserRequest.Password == registerUserRequest.ConfirmedPassword {
+		registerUserRequest.PasswordSame = "true"
 	}
 
 	if err := req.Body.Close(); err != nil {
@@ -73,19 +83,11 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 	}
 
 	if err = h.AuthenticationService.Register(newUser); err != nil {
-		log.WithFields(log.Fields{
-			"request":      registerUserRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Register User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"success": true,
-	})
+	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
 func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req *http.Request) {
@@ -118,19 +120,11 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 	}
 
 	if _, err = h.AuthenticationService.RequestVerification(requestVerificationRequest.Type, requestVerificationRequest.Recipient); err != nil {
-		log.WithFields(log.Fields{
-			"request":      requestVerificationRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Request Verification User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"success": true,
-	})
+	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
 func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.Request) {
@@ -167,19 +161,11 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 	email := verifyAccountRequest.Email
 	code := verifyAccountRequest.Code
 	if err = h.AuthenticationService.VerifyAccount(verificationID, email, code); err != nil {
-		log.WithFields(log.Fields{
-			"request":      verifyAccountRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Verify Account User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"success": true,
-	})
+	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
 func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
@@ -215,13 +201,7 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 	password := loginRequest.Password
 	requireTFA, accessToken, err := h.AuthenticationService.Login(email, password)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"request":      loginRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Login User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
@@ -266,19 +246,11 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 	email := forgotPasswordRequest.Email
 	_, err = h.AuthenticationService.ForgotPassword(email)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"request":      forgotPasswordRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Forgot Password User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"success": true,
-	})
+	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
 func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.Request) {
@@ -313,19 +285,11 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 
 	err = h.AuthenticationService.ResetPassword(resetPasswordRequest.Token, resetPasswordRequest.Password)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"request":      resetPasswordRequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Reset Password User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"success": true,
-	})
+	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
 func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
@@ -361,13 +325,7 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 
 	accessToken, err := h.AuthenticationService.VerifyTFA(tfaAccessTokenKey, userID, verifyTFARequest.Code)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"request":      verifyTFARequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Verify TFA User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
@@ -413,13 +371,7 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 
 	accessToken, err := h.AuthenticationService.VerifyTFABypass(tfaAccessTokenKey, userID, verifyTFARequest.Code)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"request":      verifyTFARequest,
-			"client":       req.Header.Get("X-API-ClientID"),
-			"x-request-id": req.Header.Get("X-Request-ID"),
-		}).WithError(err).Error("Error Handler Verify TFA Bypass User")
-
-		RenderInternalServerError(res, err)
+		h.handleServiceError(res, req, err)
 		return
 	}
 
@@ -430,4 +382,59 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 			"expired_at": accessToken.ExpiredAt,
 		},
 	})
+}
+
+func (h *AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
+	ServiceErrorsHTTPMapping := map[error]struct {
+		HTTPCode int
+		ErrCode  string
+	}{
+		userland.ErrUserNotFound: {
+			HTTPCode: http.StatusNotFound,
+			ErrCode:  "ErrUserNotFound",
+		},
+		authentication.ErrUserRegistered: {
+			HTTPCode: http.StatusBadRequest,
+			ErrCode:  "ErrUserRegistered",
+		},
+		authentication.ErrWrongOTP: {
+			HTTPCode: http.StatusBadRequest,
+			ErrCode:  "ErrWrongOTP",
+		},
+		authentication.ErrWrongPassword: {
+			HTTPCode: http.StatusBadRequest,
+			ErrCode:  "ErrWrongPassword",
+		},
+		authentication.ErrUserNotVerified: {
+			HTTPCode: http.StatusBadRequest,
+			ErrCode:  "ErrUserNotVerified",
+		},
+	}
+
+	errorMapping, isErrorMapped := ServiceErrorsHTTPMapping[err]
+	if isErrorMapped {
+		render.JSON(res, errorMapping.HTTPCode, map[string]interface{}{
+			"status": errorMapping.HTTPCode,
+			"error": map[string]interface{}{
+				"code":    errorMapping.ErrCode,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"endpoint":     req.URL.Path,
+		"client":       req.Header.Get("X-API-ClientID"),
+		"x-request-id": req.Header.Get("X-Request-ID"),
+	}).WithError(err).Error("Error Authentication Handler")
+
+	render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
+		"status": http.StatusInternalServerError,
+		"error": map[string]interface{}{
+			"code":    "ErrInternalServer",
+			"message": "userland api unable to process the request",
+		},
+	})
+	return
 }

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -462,8 +461,6 @@ func (h *ProfileHandler) deletePicture(res http.ResponseWriter, req *http.Reques
 }
 
 func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
-	// set context
-	req = req.WithContext(context.WithValue(req.Context(), contextkey.HandlerName, "setPicture"))
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -650,11 +647,8 @@ func (h *ProfileHandler) handleServiceError(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	handlerName := req.Context().Value(contextkey.HandlerName).(string)
-
 	log.WithFields(log.Fields{
 		"endpoint":     req.URL.Path,
-		"handler":      handlerName,
 		"client":       req.Header.Get("X-API-ClientID"),
 		"x-request-id": req.Header.Get("X-Request-ID"),
 	}).WithError(err).Error("Error Profile Handler")
