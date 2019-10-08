@@ -20,6 +20,24 @@ var (
 	EmailVerificationExpiration = time.Second * 60 * 2
 )
 
+func WithUserRepository(userRepository userland.UserRepository) func(service *service) {
+	return func(service *service) {
+		service.userRepository = userRepository
+	}
+}
+
+func WithKeyValueService(keyValueService userland.KeyValueService) func(service *service) {
+	return func(service *service) {
+		service.keyValueService = keyValueService
+	}
+}
+
+func WithEventRepository(eventRepository userland.EventRepository) func(service *service) {
+	return func(service *service) {
+		service.eventRepository = eventRepository
+	}
+}
+
 //Service provide an interface to story domain service
 type Service interface {
 	Profile(userID int) (userland.User, error)
@@ -34,12 +52,13 @@ type Service interface {
 	ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error)
 }
 
-func NewService(eventRepository userland.EventRepository, userRepository userland.UserRepository, keyValueService userland.KeyValueService) Service {
-	return &service{
-		eventRepository: eventRepository,
-		userRepository:  userRepository,
-		keyValueService: keyValueService,
+func NewService(options ...func(*service)) Service {
+	service := &service{}
+	for _, option := range options {
+		option(service)
 	}
+
+	return service
 }
 
 type service struct {
@@ -63,14 +82,14 @@ func (s *service) RequestChangeEmail(user userland.User, newEmail string) (verif
 	}
 
 	verificationID = security.GenerateUUID()
-	s.keyValueService.SetEx(keygenerator.EmailVerificationKey(user, verificationID), []byte(newEmail), EmailVerificationExpiration)
+	s.keyValueService.SetEx(keygenerator.EmailVerificationKey(user.ID, verificationID), []byte(newEmail), EmailVerificationExpiration)
 
 	// call mail service here
 	return verificationID, nil
 }
 
 func (s *service) ChangeEmail(user userland.User, verificationID string) error {
-	verificationKey := keygenerator.EmailVerificationKey(user, verificationID)
+	verificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 	newEmail, err := s.keyValueService.Get(verificationKey)
 	if err != nil {
 		return err
@@ -113,7 +132,7 @@ func (s *service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase6
 	}
 
 	qrcodeImageBase64 = base64.StdEncoding.EncodeToString(qrCodeImageBytes)
-	s.keyValueService.SetEx(keygenerator.TFAActivationKey(user, secret), []byte(code), time.Second*60*5)
+	s.keyValueService.SetEx(keygenerator.TFAActivationKey(user.ID, secret), []byte(code), time.Second*60*5)
 	return secret, qrcodeImageBase64, nil
 }
 
@@ -122,7 +141,7 @@ func (s *service) ActivateTFA(user userland.User, secret string, code string) ([
 		return nil, ErrTFAAlreadyEnabled
 	}
 
-	tfaActivationKey := keygenerator.TFAActivationKey(user, secret)
+	tfaActivationKey := keygenerator.TFAActivationKey(user.ID, secret)
 	expectedCode, err := s.keyValueService.Get(tfaActivationKey)
 	if err != nil {
 		return nil, err
