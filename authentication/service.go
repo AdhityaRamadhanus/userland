@@ -140,9 +140,6 @@ func (s *service) loginNormal(user userland.User) (accessToken security.AccessTo
 	if err != nil {
 		return security.AccessToken{}, err
 	}
-
-	sessionKey := keygenerator.SessionKey(accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), security.UserAccessTokenExpiration)
 	return accessToken, nil
 }
 
