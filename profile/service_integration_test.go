@@ -68,7 +68,11 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 	keyValueService := redis.NewKeyValueService(redisClient)
 	eventRepository := postgres.NewEventRepository(db)
 	userRepository := postgres.NewUserRepository(db)
-	profileService := profile.NewService(eventRepository, userRepository, keyValueService)
+	profileService := profile.NewService(
+		profile.WithEventRepository(eventRepository),
+		profile.WithUserRepository(userRepository),
+		profile.WithKeyValueService(keyValueService),
+	)
 
 	suite.DB = db
 	suite.RedisClient = redisClient
@@ -319,7 +323,7 @@ func (suite *ProfileServiceTestSuite) TestActivateTFA() {
 		user, _ := suite.ProfileService.Profile(testCase.UserID)
 		secret, _, _ := suite.ProfileService.EnrollTFA(user)
 
-		tfaActivationKey := keygenerator.TFAActivationKey(user, secret)
+		tfaActivationKey := keygenerator.TFAActivationKey(user.ID, secret)
 		code, _ := suite.KeyValueService.Get(tfaActivationKey)
 
 		_, err := suite.ProfileService.ActivateTFA(user, secret, string(code))

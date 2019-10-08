@@ -13,6 +13,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/server"
 	"github.com/AdhityaRamadhanus/userland/server/handlers"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
+	"github.com/AdhityaRamadhanus/userland/session"
 	"github.com/AdhityaRamadhanus/userland/storage/gcs"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
@@ -52,26 +53,43 @@ func main() {
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
 	eventRepository := postgres.NewEventRepository(db)
+	sessionRepository := redis.NewSessionRepository(redisClient)
 	objectStorageService := gcs.NewObjectStorageService(gcsClient, "userland_cdn")
 
-	authenticationService := authentication.NewService(userRepository, keyValueService)
-	profileService := profile.NewService(eventRepository, userRepository, keyValueService)
+	authenticationService := authentication.NewService(
+		authentication.WithUserRepository(userRepository),
+		authentication.WithKeyValueService(keyValueService),
+	)
+	profileService := profile.NewService(
+		profile.WithEventRepository(eventRepository),
+		profile.WithUserRepository(userRepository),
+		profile.WithKeyValueService(keyValueService),
+	)
+	sessionService := session.NewService(keyValueService, sessionRepository)
 
 	authenticator := middlewares.NewAuthenticator(keyValueService)
 	healthHandler := handlers.HealthzHandler{}
 	authenticationHandler := handlers.AuthenticationHandler{
 		Authenticator:         authenticator,
+		ProfileService:        profileService,
 		AuthenticationService: authenticationService,
+		SessionService:        sessionService,
 	}
 	profileHandler := handlers.ProfileHandler{
 		Authenticator:        authenticator,
 		ProfileService:       profileService,
 		ObjectStorageService: objectStorageService,
 	}
+	sessionHandler := handlers.SessionHandler{
+		Authenticator:  authenticator,
+		ProfileService: profileService,
+		SessionService: sessionService,
+	}
 	handlers := []server.Handler{
 		healthHandler,
 		authenticationHandler,
 		profileHandler,
+		sessionHandler,
 	}
 
 	server := server.NewServer(handlers)
