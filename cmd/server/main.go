@@ -71,7 +71,7 @@ func main() {
 	healthHandler := handlers.HealthzHandler{}
 	authenticationHandler := handlers.AuthenticationHandler{
 		Authenticator:         authenticator,
-		UserRepository:        userRepository,
+		ProfileService:        profileService,
 		AuthenticationService: authenticationService,
 		SessionService:        sessionService,
 	}
@@ -82,6 +82,7 @@ func main() {
 	}
 	sessionHandler := handlers.SessionHandler{
 		Authenticator:  authenticator,
+		ProfileService: profileService,
 		SessionService: sessionService,
 	}
 	handlers := []server.Handler{
