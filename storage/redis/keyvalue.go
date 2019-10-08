@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"math"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -47,19 +46,4 @@ func (c KeyValueService) Delete(key string) (err error) {
 //SetEx cache in bytes with key with expiration
 func (c KeyValueService) SetEx(key string, value []byte, expiration time.Duration) (err error) {
 	return c.redisClient.Set(key, value, expiration).Err()
-}
-
-//SetEx cache in bytes with key with expiration
-func (c KeyValueService) AddToSortedSet(key string, value string, score float64) (err error) {
-	return c.redisClient.ZAdd(key, redis.Z{Score: score, Member: value}).Err()
-}
-
-func (c KeyValueService) DeleteFromSortedSet(key string, value string) (err error) {
-	return c.redisClient.ZRem(key, value).Err()
-}
-
-//SetEx cache in bytes with key with expiration
-func (c KeyValueService) GetSortedSet(key string) (result []string, err error) {
-	stringSlice := c.redisClient.ZRange(key, math.MinInt64, math.MaxInt64)
-	return stringSlice.Result()
 }
