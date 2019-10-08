@@ -18,6 +18,7 @@ type Service interface {
 	ListSession(userID int) (userland.Sessions, error)
 	EndSession(userID int, currentSessionID string) error
 	EndOtherSessions(userID int, currentSessionID string) error
+	CreateRefreshToken(user userland.User) (security.AccessToken, error)
 }
 
 func NewService(keyValueService userland.KeyValueService, sessionRepository userland.SessionRepository) Service {
@@ -30,6 +31,7 @@ func NewService(keyValueService userland.KeyValueService, sessionRepository user
 type service struct {
 	keyValueService   userland.KeyValueService
 	sessionRepository userland.SessionRepository
+	userRepository    userland.UserRepository
 }
 
 func (s *service) CreateSession(userID int, session userland.Session) error {
@@ -65,4 +67,19 @@ func (s *service) EndOtherSessions(userID int, currentSessionID string) error {
 		s.keyValueService.Delete(sessionKey)
 	}
 	return nil
+}
+
+func (s *service) CreateRefreshToken(user userland.User) (security.AccessToken, error) {
+	refreshToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
+		Scope:      security.RefreshTokenScope,
+		Expiration: security.RefreshAccessTokenExpiration,
+	})
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	sessionKey := keygenerator.SessionKey(refreshToken.Key)
+	s.keyValueService.SetEx(sessionKey, []byte(refreshToken.Value), security.RefreshAccessTokenExpiration)
+
+	return refreshToken, nil
 }
