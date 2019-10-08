@@ -82,7 +82,8 @@ func (s *service) RequestChangeEmail(user userland.User, newEmail string) (verif
 	}
 
 	verificationID = security.GenerateUUID()
-	s.keyValueService.SetEx(keygenerator.EmailVerificationKey(user.ID, verificationID), []byte(newEmail), EmailVerificationExpiration)
+	emailVerificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
+	s.keyValueService.SetEx(emailVerificationKey, []byte(newEmail), security.EmailVerificationExpiration)
 
 	// call mail service here
 	return verificationID, nil

@@ -2,7 +2,6 @@ package authentication
 
 import (
 	"errors"
-	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
@@ -15,11 +14,6 @@ var (
 	ErrWrongPassword         = errors.New("Wrong password")
 	ErrServiceNotImplemented = errors.New("Service not implemented")
 	ErrWrongOTP              = errors.New("Wrong OTP")
-
-	UserAccessTokenExpiration   = time.Second * 60 * 10 // 10 minutes
-	TFATokenExpiration          = time.Second * 60 * 2  // 2 minutes
-	ForgotPassExpiration        = time.Second * 60 * 5  // 5 minutes
-	EmailVerificationExpiration = time.Second * 60 * 2
 )
 
 //Service provide an interface to story domain service
@@ -86,7 +80,8 @@ func (s *service) RequestVerification(verificationType string, email string) (ve
 		}
 		// create redis key verification
 		verificationID := security.GenerateUUID()
-		s.keyValueService.SetEx(keygenerator.EmailVerificationKey(user.ID, verificationID), []byte(code), EmailVerificationExpiration)
+		emailVerificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
+		s.keyValueService.SetEx(emailVerificationKey, []byte(code), security.EmailVerificationExpiration)
 		// call mail service here
 		return verificationID, nil
 	default:
@@ -122,7 +117,7 @@ func (s *service) loginWithTFA(user userland.User) (accessToken security.AccessT
 	}
 
 	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-		Expiration: TFATokenExpiration,
+		Expiration: security.TFATokenExpiration,
 		Scope:      security.TFATokenScope,
 	})
 	if err != nil {
@@ -130,16 +125,16 @@ func (s *service) loginWithTFA(user userland.User) (accessToken security.AccessT
 	}
 
 	tfaKey := keygenerator.TFAVerificationKey(user.ID, accessToken.Key)
-	s.keyValueService.SetEx(tfaKey, []byte(code), TFATokenExpiration)
+	s.keyValueService.SetEx(tfaKey, []byte(code), security.TFATokenExpiration)
 
 	sessionKey := keygenerator.SessionKey(accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), TFATokenExpiration)
+	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), security.TFATokenExpiration)
 	return accessToken, nil
 }
 
 func (s *service) loginNormal(user userland.User) (accessToken security.AccessToken, err error) {
 	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
-		Expiration: UserAccessTokenExpiration,
+		Expiration: security.UserAccessTokenExpiration,
 		Scope:      security.UserTokenScope,
 	})
 	if err != nil {
@@ -147,7 +142,7 @@ func (s *service) loginNormal(user userland.User) (accessToken security.AccessTo
 	}
 
 	sessionKey := keygenerator.SessionKey(accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), UserAccessTokenExpiration)
+	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), security.UserAccessTokenExpiration)
 	return accessToken, nil
 }
 
@@ -238,7 +233,7 @@ func (s *service) ForgotPassword(email string) (verificationID string, err error
 
 	verificationID = security.GenerateUUID()
 	forgotPassKey := keygenerator.ForgotPasswordKey(verificationID)
-	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), ForgotPassExpiration)
+	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), security.ForgotPassExpiration)
 	// call mail service
 	return verificationID, nil
 }
