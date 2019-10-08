@@ -5,6 +5,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
 	"github.com/AdhityaRamadhanus/userland/server/render"
@@ -16,6 +17,7 @@ import (
 type SessionHandler struct {
 	Authenticator  *middlewares.Authenticator
 	SessionService session.Service
+	ProfileService profile.Service
 }
 
 func (h SessionHandler) RegisterRoutes(router *mux.Router) {

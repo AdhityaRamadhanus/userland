@@ -24,7 +24,6 @@ type AuthenticationHandler struct {
 	AuthenticationService authentication.Service
 	SessionService        session.Service
 	ProfileService        profile.Service
-	UserRepository        userland.UserRepository
 }
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
@@ -211,7 +210,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	}
 
 	if !requireTFA {
-		user, err := h.UserRepository.FindByEmail(email)
+		user, err := h.ProfileService.ProfileByEmail(email)
 		if err != nil {
 			h.handleServiceError(res, req, err)
 			return
