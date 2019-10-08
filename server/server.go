@@ -7,6 +7,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 	"github.com/rs/cors"
 )
 
@@ -35,16 +36,15 @@ func NewServer(Handlers []Handler) *Server {
 
 //CreateHttpServer will return http.Server for flexible use like testing
 func (s *Server) CreateHttpServer() *http.Server {
+	middlewares := []alice.Constructor{
+		middlewares.PanicHandler,
+		middlewares.Gzip,
+		middlewares.TraceRequest,
+		cors.Default().Handler,
+		middlewares.LogRequest,
+	}
 	srv := &http.Server{
-		Handler: middlewares.PanicHandler(
-			middlewares.Gzip(
-				middlewares.TraceRequest(
-					cors.Default().Handler(
-						middlewares.LogRequest(s.Router),
-					),
-				),
-			),
-		),
+		Handler:      alice.New(middlewares...).Then(s.Router),
 		Addr:         ":" + os.Getenv("USERLAND_PORT"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  5 * time.Second,

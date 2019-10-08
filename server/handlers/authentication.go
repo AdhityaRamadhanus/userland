@@ -9,9 +9,11 @@ import (
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/authentication"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
 	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/AdhityaRamadhanus/userland/session"
 	"github.com/asaskevich/govalidator"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +22,9 @@ import (
 type AuthenticationHandler struct {
 	Authenticator         *middlewares.Authenticator
 	AuthenticationService authentication.Service
+	SessionService        session.Service
+	ProfileService        profile.Service
+	UserRepository        userland.UserRepository
 }
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
@@ -39,7 +44,7 @@ func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/auth/tfa/bypass", authenticate(authorize(security.TFATokenScope, h.verifyTFABypass))).Methods("POST")
 }
 
-func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -90,7 +95,7 @@ func (h *AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
-func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -127,7 +132,7 @@ func (h *AuthenticationHandler) requestVerification(res http.ResponseWriter, req
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
-func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -168,7 +173,7 @@ func (h *AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
-func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -205,6 +210,20 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 		return
 	}
 
+	if !requireTFA {
+		user, err := h.UserRepository.FindByEmail(email)
+		if err != nil {
+			h.handleServiceError(res, req, err)
+			return
+		}
+		h.SessionService.CreateSession(user.ID, userland.Session{
+			ID:         accessToken.Key,
+			Token:      accessToken.Value,
+			IP:         "test",
+			ClientID:   1,
+			ClientName: "web",
+		})
+	}
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
 		"require_tfa": requireTFA,
 		"access_token": map[string]interface{}{
@@ -215,7 +234,7 @@ func (h *AuthenticationHandler) login(res http.ResponseWriter, req *http.Request
 	})
 }
 
-func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -253,7 +272,7 @@ func (h *AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *htt
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
-func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -292,10 +311,11 @@ func (h *AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
-func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
+
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -329,6 +349,15 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 		return
 	}
 
+	// suppress error
+	h.SessionService.CreateSession(userID, userland.Session{
+		ID:         accessToken.Key,
+		Token:      accessToken.Value,
+		IP:         "test-tfa",
+		ClientID:   1,
+		ClientName: "web",
+	})
+
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
 		"access_token": map[string]interface{}{
 			"value":      accessToken.Key,
@@ -338,7 +367,7 @@ func (h *AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Req
 	})
 }
 
-func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *http.Request) {
+func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *http.Request) {
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
@@ -375,6 +404,14 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 		return
 	}
 
+	h.SessionService.CreateSession(userID, userland.Session{
+		ID:         accessToken.Key,
+		Token:      accessToken.Value,
+		IP:         "test-tfa-bypass",
+		ClientID:   1,
+		ClientName: "web",
+	})
+
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
 		"access_token": map[string]interface{}{
 			"value":      accessToken.Key,
@@ -384,7 +421,7 @@ func (h *AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *ht
 	})
 }
 
-func (h *AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
+func (h AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
 	ServiceErrorsHTTPMapping := map[error]struct {
 		HTTPCode int
 		ErrCode  string
