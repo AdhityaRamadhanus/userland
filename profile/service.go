@@ -16,8 +16,6 @@ var (
 	ErrWrongPassword     = errors.New("Wrong password")
 	ErrTFAAlreadyEnabled = errors.New("TFA already enabled")
 	ErrWrongOTP          = errors.New("Wrong OTP")
-
-	EmailVerificationExpiration = time.Second * 60 * 2
 )
 
 func WithUserRepository(userRepository userland.UserRepository) func(service *service) {
@@ -40,6 +38,7 @@ func WithEventRepository(eventRepository userland.EventRepository) func(service 
 
 //Service provide an interface to story domain service
 type Service interface {
+	ProfileByEmail(email string) (userland.User, error)
 	Profile(userID int) (userland.User, error)
 	SetProfile(user userland.User) error
 	RequestChangeEmail(user userland.User, newEmail string) (verificationID string, err error)
@@ -65,6 +64,10 @@ type service struct {
 	eventRepository userland.EventRepository
 	userRepository  userland.UserRepository
 	keyValueService userland.KeyValueService
+}
+
+func (s *service) ProfileByEmail(email string) (userland.User, error) {
+	return s.userRepository.FindByEmail(email)
 }
 
 func (s *service) Profile(userID int) (userland.User, error) {
