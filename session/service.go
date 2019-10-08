@@ -1,77 +1,68 @@
 package session
 
 import (
-	"encoding/json"
-	"time"
+	"errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
+	"github.com/AdhityaRamadhanus/userland/common/security"
 )
 
-type SessionDetail struct {
-	IP         string
-	ClientID   int
-	ClientName string
-}
+var (
+	ErrSessionNotFound = errors.New("Session Not Found")
+)
 
 //Service provide an interface to story domain service
 type Service interface {
-	CreateSession(userID int, currentSessionID string, sessionDetail SessionDetail) error
-	ListSession(userID int, currentSessionID string) (userland.Sessions, error)
-	// EndSession(user userland.User, currentSessionID string) error
-	// EndOtherSessions(user userland.User, currentSessionID string) error
+	CreateSession(userID int, session userland.Session) error
+	ListSession(userID int) (userland.Sessions, error)
+	EndSession(userID int, currentSessionID string) error
+	EndOtherSessions(userID int, currentSessionID string) error
 }
 
-func NewService(keyValueService userland.KeyValueService) Service {
+func NewService(keyValueService userland.KeyValueService, sessionRepository userland.SessionRepository) Service {
 	return &service{
-		keyValueService: keyValueService,
+		keyValueService:   keyValueService,
+		sessionRepository: sessionRepository,
 	}
 }
 
 type service struct {
-	keyValueService userland.KeyValueService
+	keyValueService   userland.KeyValueService
+	sessionRepository userland.SessionRepository
 }
 
-func (s *service) CreateSession(userID int, currentSessionID string, sessionDetail SessionDetail) error {
-	sessionTimestamp := time.Now().UnixNano()
-	sessionListKey := keygenerator.SessionListKey(userID)
-	sessionMap := map[string]interface{}{
-		"session_id":  currentSessionID,
-		"ip":          sessionDetail.IP,
-		"client_id":   sessionDetail.ClientID,
-		"client_name": sessionDetail.ClientName,
-		"created_at":  time.Now(),
-		"updated_at":  time.Now(),
+func (s *service) CreateSession(userID int, session userland.Session) error {
+	sessionKey := keygenerator.SessionKey(session.ID)
+	if err := s.keyValueService.SetEx(sessionKey, []byte(session.Token), security.UserAccessTokenExpiration); err != nil {
+		return err
 	}
-	sessionMapBytes, err := json.Marshal(sessionMap)
+	return s.sessionRepository.Create(userID, session)
+}
+
+func (s *service) ListSession(userID int) (userland.Sessions, error) {
+	// remove expired sessions
+	return s.sessionRepository.FindAllByUserID(userID)
+}
+
+func (s *service) EndSession(userID int, currentSessionID string) error {
+	if err := s.sessionRepository.DeleteBySessionID(userID, currentSessionID); err != nil {
+		return err
+	}
+
+	sessionKey := keygenerator.SessionKey(currentSessionID)
+	return s.keyValueService.Delete(sessionKey)
+}
+
+func (s *service) EndOtherSessions(userID int, currentSessionID string) error {
+	deletedSessionIDs, err := s.sessionRepository.DeleteOtherSessions(userID, currentSessionID)
 	if err != nil {
 		return err
 	}
-	return s.keyValueService.AddToSortedSet(sessionListKey, string(sessionMapBytes), float64(sessionTimestamp))
-}
 
-func (s *service) ListSession(userID int, currentSessionID string) (userland.Sessions, error) {
-	sessionListKey := keygenerator.SessionListKey(userID)
-	sessionsStr, err := s.keyValueService.GetSortedSet(sessionListKey)
-	if err != nil {
-		return nil, err
+	for _, deletedSessionID := range deletedSessionIDs {
+		sessionKey := keygenerator.SessionKey(deletedSessionID)
+		s.keyValueService.Delete(sessionKey)
 	}
-
-	sessions := userland.Sessions{}
-	for _, sessionStr := range sessionsStr {
-		sessionMap := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(sessionStr), &sessionMap); err != nil {
-			continue
-		}
-		session := userland.Session{
-			IsCurrent:  sessionMap["session_id"].(string) == currentSessionID,
-			ClientID:   sessionMap["client_id"].(int),
-			ClientName: sessionMap["client_name"].(string),
-			CreatedAt:  sessionMap["created_at"].(time.Time),
-			UpdatedAt:  sessionMap["updated_at"].(time.Time),
-		}
-		sessions = append(sessions, session)
-	}
-
-	return sessions, nil
+	return nil
 }
