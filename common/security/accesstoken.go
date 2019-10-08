@@ -12,8 +12,9 @@ import (
 var (
 	clientName = "userland-app"
 
-	TFATokenScope  = "tfa"
-	UserTokenScope = "user"
+	TFATokenScope     = "tfa"
+	UserTokenScope    = "user"
+	RefreshTokenScope = "refresh"
 )
 
 type AccessToken struct {
