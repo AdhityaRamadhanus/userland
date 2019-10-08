@@ -167,3 +167,59 @@ func (suite *KeyValueServiceTestSuite) TestKeyValueSetEx() {
 		suite.NotNil(err, "should not get key")
 	}
 }
+
+func (suite *KeyValueServiceTestSuite) TestKeyValueAddSortedSet() {
+	testCases := []struct {
+		Key   string
+		Value string
+		Score float64
+	}{
+		{
+			Key:   "myset",
+			Value: "value",
+			Score: float64(454),
+		},
+	}
+
+	for _, testCase := range testCases {
+		err := suite.KeyValueService.AddToSortedSet(testCase.Key, testCase.Value, testCase.Score)
+		suite.Nil(err, "should add to sorted set")
+	}
+}
+
+func (suite *KeyValueServiceTestSuite) TestKeyValueDeleteFromSortedSet() {
+	suite.RedisClient.ZAdd("myset", _redis.Z{Score: float64(454), Member: "test"})
+	testCases := []struct {
+		Key   string
+		Value string
+	}{
+		{
+			Key:   "myset",
+			Value: "test",
+		},
+	}
+
+	for _, testCase := range testCases {
+		err := suite.KeyValueService.DeleteFromSortedSet(testCase.Key, testCase.Value)
+		suite.Nil(err, "should delete to sorted set")
+	}
+}
+
+func (suite *KeyValueServiceTestSuite) TestKeyValueGetSortedSet() {
+	suite.RedisClient.ZAdd("myset", _redis.Z{Score: float64(454), Member: "test"})
+	testCases := []struct {
+		Key           string
+		ExpectedValue []string
+	}{
+		{
+			Key:           "myset",
+			ExpectedValue: []string{"test"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		res, err := suite.KeyValueService.GetSortedSet(testCase.Key)
+		suite.Nil(err, "should set key")
+		suite.Equal(res, testCase.ExpectedValue)
+	}
+}
