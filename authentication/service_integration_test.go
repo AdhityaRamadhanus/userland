@@ -69,7 +69,10 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
-	authenticationService := authentication.NewService(userRepository, keyValueService)
+	authenticationService := authentication.NewService(
+		authentication.WithUserRepository(userRepository),
+		authentication.WithKeyValueService(keyValueService),
+	)
 
 	suite.DB = db
 	suite.RedisClient = redisClient
@@ -179,7 +182,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyAccountIntegration() {
 		user, err := suite.UserRepository.FindByEmail(testCase.Email)
 		suite.Nil(err)
 		// get code
-		key := keygenerator.EmailVerificationKey(user, verificationID)
+		key := keygenerator.EmailVerificationKey(user.ID, verificationID)
 		val, err := suite.KeyValueService.Get(key)
 		suite.Nil(err)
 
@@ -279,7 +282,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyTFAIntegration() {
 		_, tfaToken, err := suite.AuthenticationService.Login(testCase.Email, testCase.Password)
 		suite.Nil(err)
 
-		tfaKey := keygenerator.TFAVerificationKey(user, tfaToken.Key)
+		tfaKey := keygenerator.TFAVerificationKey(user.ID, tfaToken.Key)
 		expectedCode, err := suite.KeyValueService.Get(tfaKey)
 		suite.Nil(err)
 
