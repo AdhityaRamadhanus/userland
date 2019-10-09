@@ -90,7 +90,7 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 	}
 
 	updateProfileRequest := struct {
-		Fullname string `json:"fullname" valid:"required,stringlength(3|128"`
+		Fullname string `json:"fullname" valid:"required,stringlength(3|128)"`
 		Bio      string `json:"bio" valid:"optional,stringlength(1|255)"`
 		Location string `json:"location" valid:"optional,stringlength(1|128)"`
 		Web      string `json:"web" valid:"optional,stringlength(1|128)"`
