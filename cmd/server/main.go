@@ -64,6 +64,7 @@ func main() {
 		profile.WithEventRepository(eventRepository),
 		profile.WithUserRepository(userRepository),
 		profile.WithKeyValueService(keyValueService),
+		profile.WithObjectStorageService(objectStorageService),
 	)
 	sessionService := session.NewService(keyValueService, sessionRepository)
 

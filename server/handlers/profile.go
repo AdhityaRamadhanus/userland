@@ -52,7 +52,6 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/tfa/remove", authenticate(authorize(security.UserTokenScope, h.removeTFA))).Methods("POST")
 
 	router.HandleFunc("/me/delete", authenticate(authorize(security.UserTokenScope, h.deleteAccount))).Methods("POST")
-
 	router.HandleFunc("/me/events", authenticate(authorize(security.UserTokenScope, h.getEvents))).Methods("GET")
 }
 
@@ -91,10 +90,10 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 	}
 
 	updateProfileRequest := struct {
-		Fullname string `json:"fullname" valid:"required"`
-		Bio      string `json:"bio" valid:"-"`
-		Location string `json:"location" valid:"-"`
-		Web      string `json:"web" valid:"-"`
+		Fullname string `json:"fullname" valid:"required,stringlength(3|128"`
+		Bio      string `json:"bio" valid:"optional,stringlength(1|255)"`
+		Location string `json:"location" valid:"optional,stringlength(1|128)"`
+		Web      string `json:"web" valid:"optional,stringlength(1|128)"`
 	}{}
 
 	// Deserialize
@@ -159,7 +158,7 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 	}
 
 	changeEmailRequest := struct {
-		Email string `json:"email" valid:"required"`
+		Email string `json:"email" valid:"required,email,stringlength(1|128)"`
 	}{}
 
 	// Deserialize
@@ -245,9 +244,10 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	}
 
 	changePasswordRequest := struct {
-		CurrentPassword      string `json:"password_current" valid:"required"`
-		NewPassword          string `json:"password" valid:"required"`
-		NewConfirmedPassword string `json:"password_confirmed" valid:"required"`
+		CurrentPassword      string `json:"password_current" valid:"required,stringlength(6|128)"`
+		NewPassword          string `json:"password" valid:"required,stringlength(6|128)"`
+		NewConfirmedPassword string `json:"password_confirmed" valid:"required,stringlength(6|128)"`
+		NewPasswordSame      string `valid:"required~Password should be same"`
 	}{}
 
 	// Deserialize
@@ -259,6 +259,10 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	if err := req.Body.Close(); err != nil {
 		RenderInternalServerError(res, err)
 		return
+	}
+
+	if changePasswordRequest.NewPassword == changePasswordRequest.NewConfirmedPassword {
+		changePasswordRequest.NewPasswordSame = "true"
 	}
 
 	if ok, err := govalidator.ValidateStruct(changePasswordRequest); !ok || err != nil {
@@ -327,8 +331,8 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 	}
 
 	activateTFARequest := struct {
-		Secret string `json:"secret" valid:"required"`
-		Code   string `json:"code" valid:"required"`
+		Secret string `json:"secret" valid:"required,stringlength(6|128)"`
+		Code   string `json:"code" valid:"required,stringlength(6|6)"`
 	}{}
 
 	// Deserialize
@@ -372,7 +376,7 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	}
 
 	removeTFARequest := struct {
-		CurrentPassword string `json:"password" valid:"required"`
+		CurrentPassword string `json:"password" valid:"required,stringlength(6|128)"`
 	}{}
 
 	// Deserialize
@@ -470,14 +474,23 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 
 	file, header, err := req.FormFile("file")
 	if err != nil {
+		if err == http.ErrMissingFile {
+			err = govalidator.Error{
+				Name:      "File",
+				Err:       err,
+				Validator: "required",
+				Path:      []string{"file"},
+			}
+			RenderInvalidRequestError(res, err)
+			return
+		}
 		h.handleServiceError(res, req, err)
 		return
 	}
 	defer file.Close()
-	var imageBuffer bytes.Buffer
-	duplicateFile := io.TeeReader(file, &imageBuffer)
-	imageBufferReader := bytes.NewReader(imageBuffer.Bytes())
 
+	// set max request body on load balancer/web server
+	imageBytes, _ := ioutil.ReadAll(file)
 	// validate image
 	setPictureRequest := struct {
 		FileName      string `valid:"required"`
@@ -488,7 +501,7 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 	}{}
 	setPictureRequest.FileName = header.Filename
 	setPictureRequest.FileSize = int(header.Size)
-	image, _, _ := image.DecodeConfig(duplicateFile)
+	image, _, _ := image.DecodeConfig(bytes.NewReader(imageBytes))
 	setPictureRequest.ImageWidth = image.Width
 	setPictureRequest.ImageHeight = image.Height
 	if image.Width == image.Height {
@@ -500,19 +513,7 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	link, err := h.ObjectStorageService.Write(imageBufferReader, userland.ObjectMetaData{
-		CacheControl: "public, max-age=86400",
-		ContentType:  "image/jpeg",
-		Path:         fmt.Sprintf("userland_%s_profile.jpeg", user.Fullname),
-	})
-	if err != nil {
-		h.handleServiceError(res, req, err)
-		return
-	}
-
-	user.PictureURL = link
-	err = h.ProfileService.SetProfile(user)
-	if err != nil {
+	if err := h.ProfileService.SetProfilePicture(user, bytes.NewReader(imageBytes)); err != nil {
 		h.handleServiceError(res, req, err)
 		return
 	}
