@@ -19,10 +19,10 @@ import (
 
 	_ "image/jpeg"
 
-	"github.com/AdhityaRamadhanus/userland/profile"
 	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
 	"github.com/AdhityaRamadhanus/userland/server/middlewares"
 	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
