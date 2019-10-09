@@ -173,6 +173,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 }
 
 func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -218,9 +219,9 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 		h.SessionService.CreateSession(user.ID, userland.Session{
 			ID:         accessToken.Key,
 			Token:      accessToken.Value,
-			IP:         "test",
-			ClientID:   1,
-			ClientName: "web",
+			IP:         clientInfo["ip"].(string),
+			ClientID:   clientInfo["client_id"].(int),
+			ClientName: clientInfo["client_name"].(string),
 		})
 	}
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
@@ -311,6 +312,7 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 }
 
 func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
@@ -352,9 +354,9 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 	h.SessionService.CreateSession(userID, userland.Session{
 		ID:         accessToken.Key,
 		Token:      accessToken.Value,
-		IP:         "test-tfa",
-		ClientID:   1,
-		ClientName: "web",
+		IP:         clientInfo["ip"].(string),
+		ClientID:   clientInfo["client_id"].(int),
+		ClientName: clientInfo["client_name"].(string),
 	})
 
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
@@ -367,6 +369,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 }
 
 func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
@@ -406,9 +409,9 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	h.SessionService.CreateSession(userID, userland.Session{
 		ID:         accessToken.Key,
 		Token:      accessToken.Value,
-		IP:         "test-tfa-bypass",
-		ClientID:   1,
-		ClientName: "web",
+		IP:         clientInfo["ip"].(string),
+		ClientID:   clientInfo["client_id"].(int),
+		ClientName: clientInfo["client_name"].(string),
 	})
 
 	render.JSON(res, http.StatusCreated, map[string]interface{}{

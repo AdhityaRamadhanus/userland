@@ -127,8 +127,8 @@ func (s *service) loginWithTFA(user userland.User) (accessToken security.AccessT
 	tfaKey := keygenerator.TFAVerificationKey(user.ID, accessToken.Key)
 	s.keyValueService.SetEx(tfaKey, []byte(code), security.TFATokenExpiration)
 
-	sessionKey := keygenerator.SessionKey(accessToken.Key)
-	s.keyValueService.SetEx(sessionKey, []byte(accessToken.Value), security.TFATokenExpiration)
+	tokenKey := keygenerator.TokenKey(accessToken.Key)
+	s.keyValueService.SetEx(tokenKey, []byte(accessToken.Value), security.TFATokenExpiration)
 	return accessToken, nil
 }
 
@@ -174,9 +174,9 @@ func (s *service) VerifyTFA(tfaToken string, userID int, code string) (accessTok
 		return security.AccessToken{}, err
 	}
 
-	tfaKey := keygenerator.TFAVerificationKey(user.ID, tfaToken)
-	tfaSessionKey := keygenerator.SessionKey(tfaToken)
-	expectedCode, err := s.keyValueService.Get(tfaKey)
+	tfaVerificationID := keygenerator.TFAVerificationKey(user.ID, tfaToken)
+	tfaTokenKey := keygenerator.TokenKey(tfaToken)
+	expectedCode, err := s.keyValueService.Get(tfaVerificationID)
 	if err != nil {
 		return security.AccessToken{}, err
 	}
@@ -186,8 +186,8 @@ func (s *service) VerifyTFA(tfaToken string, userID int, code string) (accessTok
 		return security.AccessToken{}, ErrWrongOTP
 	}
 
-	defer s.keyValueService.Delete(tfaKey)
-	defer s.keyValueService.Delete(tfaSessionKey)
+	defer s.keyValueService.Delete(tfaVerificationID)
+	defer s.keyValueService.Delete(tfaTokenKey)
 	return s.loginNormal(user)
 }
 
@@ -198,8 +198,8 @@ func (s *service) VerifyTFABypass(tfaToken string, userID int, code string) (acc
 		return security.AccessToken{}, err
 	}
 
-	tfaKey := keygenerator.TFAVerificationKey(user.ID, tfaToken)
-	tfaSessionKey := keygenerator.SessionKey(tfaToken)
+	tfaVerificationID := keygenerator.TFAVerificationKey(user.ID, tfaToken)
+	tfaTokenKey := keygenerator.TokenKey(tfaVerificationID)
 	codeFound := false
 	foundIdx := -1
 	for idx, backupCode := range user.BackupCodes {
@@ -217,8 +217,8 @@ func (s *service) VerifyTFABypass(tfaToken string, userID int, code string) (acc
 	user.BackupCodes = append(user.BackupCodes[:foundIdx], user.BackupCodes[foundIdx+1:]...)
 	s.userRepository.StoreBackupCodes(user)
 
-	defer s.keyValueService.Delete(tfaKey)
-	defer s.keyValueService.Delete(tfaSessionKey)
+	defer s.keyValueService.Delete(tfaVerificationID)
+	defer s.keyValueService.Delete(tfaTokenKey)
 	return s.loginNormal(user)
 }
 
