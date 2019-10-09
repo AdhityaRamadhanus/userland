@@ -103,8 +103,8 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 	}
 
 	requestVerificationRequest := struct {
-		Type      string `json:"type" valid:"required"`
-		Recipient string `json:"recipient" valid:"required"`
+		Type      string `json:"type" valid:"required,stringlength(1|32)"`
+		Recipient string `json:"recipient" valid:"required,stringlength(1|128)"`
 	}{}
 
 	// Deserialize
@@ -140,7 +140,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 	}
 
 	verifyAccountRequest := struct {
-		Email          string `json:"email" valid:"required"`
+		Email          string `json:"email" valid:"required,email,stringlength(1|128)"`
 		VerificationID string `json:"verification_id" valid:"required"`
 		Code           string `json:"code" valid:"required"`
 	}{}
@@ -182,8 +182,8 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	}
 
 	loginRequest := struct {
-		Email    string `json:"email" valid:"required"`
-		Password string `json:"password" valid:"required"`
+		Email    string `json:"email" valid:"required,email,stringlength(1|64)"`
+		Password string `json:"password" valid:"required,stringlength(6|128)"`
 	}{}
 
 	// Deserialize
@@ -243,7 +243,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 	}
 
 	forgotPasswordRequest := struct {
-		Email string `json:"email" valid:"required"`
+		Email string `json:"email" valid:"required,email,stringlength(1|64)"`
 	}{}
 
 	// Deserialize
@@ -282,8 +282,8 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 
 	resetPasswordRequest := struct {
 		Token             string `json:"token" valid:"required"`
-		Password          string `json:"password" valid:"required"`
-		ConfirmedPassword string `json:"password_confirmed" valid:"required"`
+		Password          string `json:"password" valid:"required,stringlength(6|128)"`
+		ConfirmedPassword string `json:"password_confirmed" valid:"required,,stringlength(6|128)"`
 	}{}
 
 	// Deserialize
@@ -325,7 +325,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 	}
 
 	verifyTFARequest := struct {
-		Code string `json:"code" valid:"required"`
+		Code string `json:"code" valid:"required,stringlength(6|6)"`
 	}{}
 
 	// Deserialize
@@ -381,7 +381,7 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	}
 
 	verifyTFARequest := struct {
-		Code string `json:"code" valid:"required"`
+		Code string `json:"code" valid:"required,stringlength(6|6)"`
 	}{}
 
 	// Deserialize
