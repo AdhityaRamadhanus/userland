@@ -18,7 +18,8 @@ type Service interface {
 	ListSession(userID int) (userland.Sessions, error)
 	EndSession(userID int, currentSessionID string) error
 	EndOtherSessions(userID int, currentSessionID string) error
-	CreateRefreshToken(user userland.User) (security.AccessToken, error)
+	CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error)
+	CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error)
 }
 
 func NewService(keyValueService userland.KeyValueService, sessionRepository userland.SessionRepository) Service {
@@ -69,10 +70,13 @@ func (s *service) EndOtherSessions(userID int, currentSessionID string) error {
 	return nil
 }
 
-func (s *service) CreateRefreshToken(user userland.User) (security.AccessToken, error) {
+func (s *service) CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error) {
 	refreshToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
 		Scope:      security.RefreshTokenScope,
 		Expiration: security.RefreshAccessTokenExpiration,
+		CustomClaim: map[string]interface{}{
+			"previous_session_id": currentSessionID,
+		},
 	})
 	if err != nil {
 		return security.AccessToken{}, err
@@ -82,4 +86,18 @@ func (s *service) CreateRefreshToken(user userland.User) (security.AccessToken, 
 	s.keyValueService.SetEx(sessionKey, []byte(refreshToken.Value), security.RefreshAccessTokenExpiration)
 
 	return refreshToken, nil
+}
+
+func (s *service) CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error) {
+	newAccessToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
+		Scope:      security.UserTokenScope,
+		Expiration: security.UserAccessTokenExpiration,
+	})
+	if err != nil {
+		return security.AccessToken{}, err
+	}
+
+	sessionKey := keygenerator.SessionKey(refreshTokenID)
+	s.keyValueService.Delete(sessionKey)
+	return newAccessToken, nil
 }
