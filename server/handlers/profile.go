@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/AdhityaRamadhanus/userland/server/serializers"
+
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/asaskevich/govalidator"
@@ -63,15 +65,7 @@ func (h *ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	render.JSON(res, http.StatusOK, map[string]interface{}{
-		"id":         user.ID,
-		"fullname":   user.Fullname,
-		"location":   user.Location,
-		"bio":        user.Bio,
-		"web":        user.WebURL,
-		"picture":    user.PictureURL,
-		"created_at": user.CreatedAt,
-	})
+	render.JSON(res, http.StatusOK, serializers.SerializeUserToJSON(user))
 }
 
 func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Request) {
@@ -596,17 +590,7 @@ func getUserIDFromContext(req *http.Request) int {
 func serializeEvents(events []userland.Event) []map[string]interface{} {
 	serializedEvents := []map[string]interface{}{}
 	for _, event := range events {
-		serializedEvent := map[string]interface{}{
-			"event": event.Event,
-			"ua":    event.UserAgent,
-			"ip":    event.IP,
-			"client": map[string]interface{}{
-				"id":   event.ClientID,
-				"name": event.ClientName,
-			},
-			"created_at": event.Timestamp,
-		}
-
+		serializedEvent := serializers.SerializeEventToJSON(event)
 		serializedEvents = append(serializedEvents, serializedEvent)
 	}
 
