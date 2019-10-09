@@ -16,7 +16,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/profile"
+	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	log "github.com/sirupsen/logrus"
@@ -46,7 +46,7 @@ func (suite *ProfileServiceTestSuite) SetupTest() {
 }
 
 func (suite *ProfileServiceTestSuite) SetupSuite() {
-	godotenv.Load("../.env")
+	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)

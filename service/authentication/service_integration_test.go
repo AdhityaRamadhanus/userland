@@ -17,7 +17,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/authentication"
+	"github.com/AdhityaRamadhanus/userland/service/authentication"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 // Make sure that VariableThatShouldStartAtFive is set to five
 // before each test
 func (suite *AuthenticationServiceTestSuite) SetupSuite() {
-	godotenv.Load("../.env")
+	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
