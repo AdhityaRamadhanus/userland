@@ -283,7 +283,8 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	resetPasswordRequest := struct {
 		Token             string `json:"token" valid:"required"`
 		Password          string `json:"password" valid:"required,stringlength(6|128)"`
-		ConfirmedPassword string `json:"password_confirmed" valid:"required,,stringlength(6|128)"`
+		ConfirmedPassword string `json:"password_confirmed" valid:"required,stringlength(6|128)"`
+		PasswordSame      string `valid:"required~Password should be same"`
 	}{}
 
 	// Deserialize
@@ -295,6 +296,10 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	if err := req.Body.Close(); err != nil {
 		RenderInternalServerError(res, err)
 		return
+	}
+
+	if resetPasswordRequest.Password == resetPasswordRequest.ConfirmedPassword {
+		resetPasswordRequest.PasswordSame = "true"
 	}
 
 	if ok, err := govalidator.ValidateStruct(resetPasswordRequest); !ok || err != nil {
