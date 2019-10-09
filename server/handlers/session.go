@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/AdhityaRamadhanus/userland/server/serializers"
+
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/profile"
@@ -140,18 +142,10 @@ func (h SessionHandler) createNewAccessToken(res http.ResponseWriter, req *http.
 func serializeSessions(sessions userland.Sessions, currentSessionID string) []map[string]interface{} {
 	serializedSessions := []map[string]interface{}{}
 	for _, _session := range sessions {
-		serializedSession := map[string]interface{}{
-			"session_id": _session.ID,
-			"is_current": _session.ID == currentSessionID,
-			"ip":         _session.IP,
-			"client": map[string]interface{}{
-				"id":   _session.ClientID,
-				"name": _session.ClientName,
-			},
-			"created_at": _session.CreatedAt,
-			"updated_at": _session.UpdatedAt,
+		serializedSession := serializers.SerializeSessionToJSON(_session)
+		if _session.ID == currentSessionID {
+			serializedSession["is_current"] = true
 		}
-
 		serializedSessions = append(serializedSessions, serializedSession)
 	}
 
