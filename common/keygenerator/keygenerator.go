@@ -16,8 +16,8 @@ func TFAActivationKey(userID int, uuid string) string {
 	return fmt.Sprintf("tfa-activation:%d:%s", userID, uuid)
 }
 
-func SessionKey(uuid string) string {
-	return fmt.Sprintf("session:%s", uuid)
+func TokenKey(uuid string) string {
+	return fmt.Sprintf("token:%s", uuid)
 }
 
 func SessionListKey(userID int) string {

@@ -103,8 +103,8 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 	}
 
 	requestVerificationRequest := struct {
-		Type      string `json:"type" valid:"required"`
-		Recipient string `json:"recipient" valid:"required"`
+		Type      string `json:"type" valid:"required,stringlength(1|32)"`
+		Recipient string `json:"recipient" valid:"required,stringlength(1|128)"`
 	}{}
 
 	// Deserialize
@@ -140,7 +140,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 	}
 
 	verifyAccountRequest := struct {
-		Email          string `json:"email" valid:"required"`
+		Email          string `json:"email" valid:"required,email,stringlength(1|128)"`
 		VerificationID string `json:"verification_id" valid:"required"`
 		Code           string `json:"code" valid:"required"`
 	}{}
@@ -173,6 +173,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 }
 
 func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -181,8 +182,8 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	}
 
 	loginRequest := struct {
-		Email    string `json:"email" valid:"required"`
-		Password string `json:"password" valid:"required"`
+		Email    string `json:"email" valid:"required,email,stringlength(1|64)"`
+		Password string `json:"password" valid:"required,stringlength(6|128)"`
 	}{}
 
 	// Deserialize
@@ -218,9 +219,9 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 		h.SessionService.CreateSession(user.ID, userland.Session{
 			ID:         accessToken.Key,
 			Token:      accessToken.Value,
-			IP:         "test",
-			ClientID:   1,
-			ClientName: "web",
+			IP:         clientInfo["ip"].(string),
+			ClientID:   clientInfo["client_id"].(int),
+			ClientName: clientInfo["client_name"].(string),
 		})
 	}
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
@@ -242,7 +243,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 	}
 
 	forgotPasswordRequest := struct {
-		Email string `json:"email" valid:"required"`
+		Email string `json:"email" valid:"required,email,stringlength(1|64)"`
 	}{}
 
 	// Deserialize
@@ -281,8 +282,9 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 
 	resetPasswordRequest := struct {
 		Token             string `json:"token" valid:"required"`
-		Password          string `json:"password" valid:"required"`
-		ConfirmedPassword string `json:"password_confirmed" valid:"required"`
+		Password          string `json:"password" valid:"required,stringlength(6|128)"`
+		ConfirmedPassword string `json:"password_confirmed" valid:"required,stringlength(6|128)"`
+		PasswordSame      string `valid:"required~Password should be same"`
 	}{}
 
 	// Deserialize
@@ -294,6 +296,10 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	if err := req.Body.Close(); err != nil {
 		RenderInternalServerError(res, err)
 		return
+	}
+
+	if resetPasswordRequest.Password == resetPasswordRequest.ConfirmedPassword {
+		resetPasswordRequest.PasswordSame = "true"
 	}
 
 	if ok, err := govalidator.ValidateStruct(resetPasswordRequest); !ok || err != nil {
@@ -311,6 +317,7 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 }
 
 func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
@@ -323,7 +330,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 	}
 
 	verifyTFARequest := struct {
-		Code string `json:"code" valid:"required"`
+		Code string `json:"code" valid:"required,stringlength(6|6)"`
 	}{}
 
 	// Deserialize
@@ -352,9 +359,9 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 	h.SessionService.CreateSession(userID, userland.Session{
 		ID:         accessToken.Key,
 		Token:      accessToken.Value,
-		IP:         "test-tfa",
-		ClientID:   1,
-		ClientName: "web",
+		IP:         clientInfo["ip"].(string),
+		ClientID:   clientInfo["client_id"].(int),
+		ClientName: clientInfo["client_name"].(string),
 	})
 
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
@@ -367,6 +374,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 }
 
 func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	tfaAccessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 	tfaAccessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
 	userID := int(tfaAccessToken["userid"].(float64))
@@ -378,7 +386,7 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	}
 
 	verifyTFARequest := struct {
-		Code string `json:"code" valid:"required"`
+		Code string `json:"code" valid:"required,stringlength(6|6)"`
 	}{}
 
 	// Deserialize
@@ -406,9 +414,9 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	h.SessionService.CreateSession(userID, userland.Session{
 		ID:         accessToken.Key,
 		Token:      accessToken.Value,
-		IP:         "test-tfa-bypass",
-		ClientID:   1,
-		ClientName: "web",
+		IP:         clientInfo["ip"].(string),
+		ClientID:   clientInfo["client_id"].(int),
+		ClientName: clientInfo["client_name"].(string),
 	})
 
 	render.JSON(res, http.StatusCreated, map[string]interface{}{

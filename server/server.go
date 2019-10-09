@@ -40,6 +40,7 @@ func (s *Server) CreateHttpServer() *http.Server {
 		middlewares.PanicHandler,
 		middlewares.Gzip,
 		middlewares.TraceRequest,
+		middlewares.ParseClientInfo,
 		cors.Default().Handler,
 		middlewares.LogRequest,
 	}

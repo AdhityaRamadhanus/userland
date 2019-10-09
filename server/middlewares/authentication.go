@@ -63,7 +63,7 @@ func (a *Authenticator) Authenticate(nextHandler http.HandlerFunc) http.HandlerF
 			return
 		}
 
-		token, err := a.keyValueService.Get(keygenerator.SessionKey(cred))
+		token, err := a.keyValueService.Get(keygenerator.TokenKey(cred))
 		if err != nil {
 			render.JSON(res, http.StatusUnauthorized, map[string]interface{}{
 				"status": http.StatusUnauthorized,

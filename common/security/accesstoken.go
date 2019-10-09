@@ -25,8 +25,9 @@ type AccessToken struct {
 }
 
 type AccessTokenOptions struct {
-	Expiration time.Duration
-	Scope      string
+	Expiration  time.Duration
+	Scope       string
+	CustomClaim map[string]interface{}
 }
 
 func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessToken, error) {
@@ -43,6 +44,12 @@ func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessTo
 		"fullname": user.Fullname,
 		"email":    user.Email,
 		"userid":   user.ID,
+	}
+
+	if len(options.CustomClaim) > 0 {
+		for key, value := range options.CustomClaim {
+			claims[key] = value
+		}
 	}
 
 	expirationEpoch := nowInSeconds + int64(options.Expiration.Seconds())

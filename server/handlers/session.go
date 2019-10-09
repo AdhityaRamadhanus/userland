@@ -27,6 +27,8 @@ func (h SessionHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.listSession))).Methods("GET")
 	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.endCurrentSession))).Methods("DELETE")
 	router.HandleFunc("/me/session/other", authenticate(authorize(security.UserTokenScope, h.endOtherSession))).Methods("DELETE")
+	router.HandleFunc("/me/session/refresh_token", authenticate(authorize(security.UserTokenScope, h.createRefreshToken))).Methods("GET")
+	router.HandleFunc("/me/session/access_token", authenticate(authorize(security.RefreshTokenScope, h.createNewAccessToken))).Methods("GET")
 }
 
 func (h SessionHandler) listSession(res http.ResponseWriter, req *http.Request) {
@@ -69,6 +71,70 @@ func (h SessionHandler) endOtherSession(res http.ResponseWriter, req *http.Reque
 	}
 
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+func (h SessionHandler) createRefreshToken(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	accessTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+
+	refreshToken, err := h.SessionService.CreateRefreshToken(user, accessTokenKey)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"access_token": map[string]interface{}{
+			"value":      refreshToken.Key,
+			"type":       refreshToken.Type,
+			"expired_at": refreshToken.ExpiredAt,
+		},
+	})
+}
+
+func (h SessionHandler) createNewAccessToken(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
+	refreshToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	refreshTokenKey := req.Context().Value(contextkey.AccessTokenKey).(string)
+	userID := int(refreshToken["userid"].(float64))
+	prevSessionID := refreshToken["previous_session_id"].(string)
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+
+	// create access token
+	accessToken, err := h.SessionService.CreateNewAccessToken(user, refreshTokenKey)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+	// create session
+	h.SessionService.CreateSession(user.ID, userland.Session{
+		ID:         accessToken.Key,
+		Token:      accessToken.Value,
+		IP:         clientInfo["ip"].(string),
+		ClientID:   clientInfo["client_id"].(int),
+		ClientName: clientInfo["client_name"].(string),
+	})
+	// delete prev session
+	h.SessionService.EndSession(user.ID, prevSessionID)
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"access_token": map[string]interface{}{
+			"value":      accessToken.Key,
+			"type":       accessToken.Type,
+			"expired_at": accessToken.ExpiredAt,
+		},
+	})
 }
 
 func serializeSessions(sessions userland.Sessions, currentSessionID string) []map[string]interface{} {
