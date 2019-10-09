@@ -27,6 +27,7 @@ func (h SessionHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.listSession))).Methods("GET")
 	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.endCurrentSession))).Methods("DELETE")
 	router.HandleFunc("/me/session/other", authenticate(authorize(security.UserTokenScope, h.endOtherSession))).Methods("DELETE")
+	router.HandleFunc("/me/session/refresh_token", authenticate(authorize(security.UserTokenScope, h.createRefreshToken))).Methods("GET")
 }
 
 func (h SessionHandler) listSession(res http.ResponseWriter, req *http.Request) {
@@ -69,6 +70,31 @@ func (h SessionHandler) endOtherSession(res http.ResponseWriter, req *http.Reque
 	}
 
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+func (h SessionHandler) createRefreshToken(res http.ResponseWriter, req *http.Request) {
+	accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
+	userID := int(accessToken["userid"].(float64))
+
+	user, err := h.ProfileService.Profile(userID)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+
+	refreshToken, err := h.SessionService.CreateRefreshToken(user)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
+
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"access_token": map[string]interface{}{
+			"value":      refreshToken.Key,
+			"type":       refreshToken.Type,
+			"expired_at": refreshToken.ExpiredAt,
+		},
+	})
 }
 
 func serializeSessions(sessions userland.Sessions, currentSessionID string) []map[string]interface{} {
