@@ -15,3 +15,7 @@
 .env
 
 data/*
+
+configmap
+secret
+deploy/*
