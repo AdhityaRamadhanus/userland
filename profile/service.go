@@ -3,6 +3,8 @@ package profile
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -36,11 +38,18 @@ func WithEventRepository(eventRepository userland.EventRepository) func(service 
 	}
 }
 
+func WithObjectStorageService(objectStorageService userland.ObjectStorageService) func(service *service) {
+	return func(service *service) {
+		service.objectStorageService = objectStorageService
+	}
+}
+
 //Service provide an interface to story domain service
 type Service interface {
 	ProfileByEmail(email string) (userland.User, error)
 	Profile(userID int) (userland.User, error)
 	SetProfile(user userland.User) error
+	SetProfilePicture(user userland.User, image io.Reader) error
 	RequestChangeEmail(user userland.User, newEmail string) (verificationID string, err error)
 	ChangeEmail(user userland.User, verificationID string) error
 	ChangePassword(user userland.User, oldPassword, newPassword string) error
@@ -61,9 +70,10 @@ func NewService(options ...func(*service)) Service {
 }
 
 type service struct {
-	eventRepository userland.EventRepository
-	userRepository  userland.UserRepository
-	keyValueService userland.KeyValueService
+	eventRepository      userland.EventRepository
+	userRepository       userland.UserRepository
+	keyValueService      userland.KeyValueService
+	objectStorageService userland.ObjectStorageService
 }
 
 func (s *service) ProfileByEmail(email string) (userland.User, error) {
@@ -203,4 +213,18 @@ func (s *service) DeleteAccount(user userland.User, currPassword string) error {
 
 func (s *service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error) {
 	return s.eventRepository.FindAllByUserID(user.ID, pagingOptions)
+}
+
+func (s *service) SetProfilePicture(user userland.User, image io.Reader) error {
+	link, err := s.objectStorageService.Write(image, userland.ObjectMetaData{
+		CacheControl: "public, max-age=86400",
+		ContentType:  "image/jpeg",
+		Path:         fmt.Sprintf("userland_%d_profile.jpeg", user.ID),
+	})
+	if err != nil {
+		return err
+	}
+
+	user.PictureURL = link
+	return s.SetProfile(user)
 }

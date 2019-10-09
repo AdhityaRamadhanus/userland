@@ -60,8 +60,13 @@ func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagin
 		options.Limit,
 		options.Offset,
 	)
-	err = e.db.Select(&scanStructEvents, selectQuery, userID)
+
+	stmt, err := e.db.Preparex(selectQuery)
 	if err != nil {
+		return userland.Events{}, 0, err
+	}
+
+	if err := stmt.Select(&scanStructEvents, userID); err != nil {
 		return userland.Events{}, 0, err
 	}
 

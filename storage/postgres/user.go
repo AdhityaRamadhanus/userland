@@ -63,8 +63,13 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 				updated_at
 			FROM users 
 			WHERE id=$1`
-	err = s.db.Get(&userScanStruct, query, id)
+
+	stmt, err := s.db.Preparex(query)
 	if err != nil {
+		return userland.User{}, err
+	}
+
+	if err := stmt.Get(&userScanStruct, id); err != nil {
 		if err == sql.ErrNoRows {
 			return userland.User{}, userland.ErrUserNotFound
 		}
@@ -97,8 +102,12 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 			FROM users 
 			WHERE email=$1`
 
-	err = s.db.Get(&userScanStruct, query, email)
+	stmt, err := s.db.Preparex(query)
 	if err != nil {
+		return userland.User{}, err
+	}
+
+	if err := stmt.Get(&userScanStruct, email); err != nil {
 		if err == sql.ErrNoRows {
 			return userland.User{}, userland.ErrUserNotFound
 		}
@@ -152,8 +161,11 @@ func (s UserRepository) Insert(user userland.User) error {
 			) RETURNING id`
 
 	nstmt, err := s.db.PrepareNamed(query)
-	_, err = nstmt.Query(user)
 	if err != nil {
+		return err
+	}
+
+	if _, err = nstmt.Query(user); err != nil {
 		if err.(*pq.Error).Code.Name() == "unique_violation" {
 			return userland.ErrDuplicateKey
 		}
