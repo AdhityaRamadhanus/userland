@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
 )
 
 func getClientIP(req *http.Request) string {

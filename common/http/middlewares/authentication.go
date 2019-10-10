@@ -9,8 +9,8 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
-	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	jwt "github.com/dgrijalva/jwt-go"
 )
 

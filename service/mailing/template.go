@@ -6,9 +6,9 @@ import (
 )
 
 type OTPTemplateArgs struct {
-	Recipient string
-	OTP       string
-	OTPType   string
+	Recipient string `json:"recipient"`
+	OTP       string `json:"otp"`
+	OTPType   string `json:"otp_type"`
 }
 
 func OTPTemplate(args OTPTemplateArgs) (string, error) {

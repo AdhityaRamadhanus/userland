@@ -8,9 +8,9 @@ import (
 	"syscall"
 
 	_gcs "cloud.google.com/go/storage"
-	"github.com/AdhityaRamadhanus/userland/server"
-	"github.com/AdhityaRamadhanus/userland/server/handlers"
-	"github.com/AdhityaRamadhanus/userland/server/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	server "github.com/AdhityaRamadhanus/userland/server/api"
+	"github.com/AdhityaRamadhanus/userland/server/api/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"

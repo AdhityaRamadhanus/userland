@@ -3,13 +3,13 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/AdhityaRamadhanus/userland/server/serializers"
+	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
 
 	"github.com/AdhityaRamadhanus/userland"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
-	"github.com/AdhityaRamadhanus/userland/server/middlewares"
-	"github.com/AdhityaRamadhanus/userland/server/render"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
 	"github.com/gorilla/mux"

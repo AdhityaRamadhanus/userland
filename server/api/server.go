@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/AdhityaRamadhanus/userland/server/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"

@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/AdhityaRamadhanus/userland/server/serializers"
+	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/security"
@@ -19,9 +19,9 @@ import (
 
 	_ "image/jpeg"
 
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
-	"github.com/AdhityaRamadhanus/userland/server/middlewares"
-	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -79,7 +79,7 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -92,17 +92,17 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 
 	// Deserialize
 	if err := json.Unmarshal(body, &updateProfileRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(updateProfileRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -157,17 +157,17 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 
 	// Deserialize
 	if err := json.Unmarshal(body, &changeEmailRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(changeEmailRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -190,7 +190,7 @@ func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request)
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -200,17 +200,17 @@ func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request)
 
 	// Deserialize
 	if err := json.Unmarshal(body, &changeEmailRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(changeEmailRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -246,12 +246,12 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 
 	// Deserialize
 	if err := json.Unmarshal(body, &changePasswordRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
@@ -260,7 +260,7 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	}
 
 	if ok, err := govalidator.ValidateStruct(changePasswordRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -320,7 +320,7 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -331,17 +331,17 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 
 	// Deserialize
 	if err := json.Unmarshal(body, &activateTFARequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(activateTFARequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -365,7 +365,7 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -375,17 +375,17 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 
 	// Deserialize
 	if err := json.Unmarshal(body, &removeTFARequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -408,7 +408,7 @@ func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Reques
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -418,17 +418,17 @@ func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Reques
 
 	// Deserialize
 	if err := json.Unmarshal(body, &removeTFARequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(removeTFARequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -475,7 +475,7 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 				Validator: "required",
 				Path:      []string{"file"},
 			}
-			RenderInvalidRequestError(res, err)
+			render.InvalidRequestError(res, err)
 			return
 		}
 		h.handleServiceError(res, req, err)
@@ -503,7 +503,7 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 	}
 
 	if ok, err := govalidator.ValidateStruct(setPictureRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -544,7 +544,7 @@ func (h *ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if ok, err := govalidator.ValidateStruct(getEventsRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 

@@ -7,15 +7,15 @@ VERSION ?= 1.0.0
 
 default: unit-test build
 
-build:
+build-api:
 	@echo "Setup userland"
 ifeq ($(OS),Linux)
 	@echo "Build userland..."
-	GOOS=linux  go build -ldflags "-s -w -X main.Version=$(VERSION)" -o userland cmd/server/main.go
+	GOOS=linux  go build -ldflags "-s -w -X main.Version=$(VERSION)" -o userland cmd/api/main.go
 endif
 ifeq ($(OS) ,Darwin)
 	@echo "Build userland..."
-	GOOS=darwin go build -ldflags "-X main.Version=$(VERSION)" -o userland cmd/server/main.go
+	GOOS=darwin go build -ldflags "-X main.Version=$(VERSION)" -o userland cmd/api/main.go
 endif
 	@echo "Succesfully Build for ${OS} version:= ${VERSION}"
 

@@ -7,10 +7,10 @@ import (
 	"net/http"
 
 	"github.com/AdhityaRamadhanus/userland"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
-	"github.com/AdhityaRamadhanus/userland/server/middlewares"
-	"github.com/AdhityaRamadhanus/userland/server/render"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
@@ -47,7 +47,7 @@ func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.R
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.R
 
 	// Deserialize
 	if err := json.Unmarshal(body, &registerUserRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
@@ -71,12 +71,12 @@ func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.R
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(registerUserRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -109,17 +109,17 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 
 	// Deserialize
 	if err := json.Unmarshal(body, &requestVerificationRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(requestVerificationRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -147,17 +147,17 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyAccountRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyAccountRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -188,17 +188,17 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 
 	// Deserialize
 	if err := json.Unmarshal(body, &loginRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(loginRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -248,17 +248,17 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 
 	// Deserialize
 	if err := json.Unmarshal(body, &forgotPasswordRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(forgotPasswordRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -276,7 +276,7 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -289,12 +289,12 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 
 	// Deserialize
 	if err := json.Unmarshal(body, &resetPasswordRequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
@@ -303,7 +303,7 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	}
 
 	if ok, err := govalidator.ValidateStruct(resetPasswordRequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -335,17 +335,17 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyTFARequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyTFARequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 
@@ -381,7 +381,7 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		RenderFailedToReadBodyError(res, err)
+		render.FailedToReadBodyError(res, err)
 		return
 	}
 
@@ -391,17 +391,17 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 
 	// Deserialize
 	if err := json.Unmarshal(body, &verifyTFARequest); err != nil {
-		RenderFailedToUnmarshalJSONError(res, err)
+		render.FailedToUnmarshalJSONError(res, err)
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		RenderInternalServerError(res, err)
+		render.InternalServerError(res, err)
 		return
 	}
 
 	if ok, err := govalidator.ValidateStruct(verifyTFARequest); !ok || err != nil {
-		RenderInvalidRequestError(res, err)
+		render.InvalidRequestError(res, err)
 		return
 	}
 

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/AdhityaRamadhanus/userland/server/internal/contextkey"
-	"github.com/AdhityaRamadhanus/userland/server/render"
+	"github.com/AdhityaRamadhanus/userland/common/contextkey"
+	"github.com/AdhityaRamadhanus/userland/common/http/render"
 )
 
 func Authorize(desiredTokenScope string, nextHandler http.HandlerFunc) http.HandlerFunc {
