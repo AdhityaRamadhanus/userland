@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/AdhityaRamadhanus/userland"
+	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 )
@@ -40,6 +41,12 @@ func WithKeyValueService(keyValueService userland.KeyValueService) func(service 
 	}
 }
 
+func WithMailingClient(mailingClient mailing.Client) func(service *service) {
+	return func(service *service) {
+		service.mailingClient = mailingClient
+	}
+}
+
 func NewService(options ...func(*service)) Service {
 	service := &service{}
 	for _, option := range options {
@@ -50,6 +57,7 @@ func NewService(options ...func(*service)) Service {
 }
 
 type service struct {
+	mailingClient   mailing.Client
 	userRepository  userland.UserRepository
 	keyValueService userland.KeyValueService
 }
@@ -83,6 +91,7 @@ func (s *service) RequestVerification(verificationType string, email string) (ve
 		emailVerificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 		s.keyValueService.SetEx(emailVerificationKey, []byte(code), security.EmailVerificationExpiration)
 		// call mail service here
+		s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "Email Verification", code)
 		return verificationID, nil
 	default:
 		return "", ErrServiceNotImplemented

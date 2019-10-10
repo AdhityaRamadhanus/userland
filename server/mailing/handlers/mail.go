@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
@@ -18,7 +19,7 @@ type MailHandler struct {
 }
 
 func (h MailHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/mail/otp", middlewares.BasicAuth("test", "coba", h.sendEmailOTP)).Methods("POST")
+	router.HandleFunc("/mail/otp", middlewares.BasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS"), h.sendEmailOTP)).Methods("POST")
 }
 
 func (h *MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {

@@ -5,6 +5,7 @@ go 1.12
 require (
 	cloud.google.com/go v0.38.0
 	github.com/AdhityaRamadhanus/chronicle v0.0.0-20181104100529-12c91852031a // indirect
+	github.com/AdhityaRamadhanus/godex v0.0.0-20190820083838-58f02e89e36d
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis v6.15.5+incompatible

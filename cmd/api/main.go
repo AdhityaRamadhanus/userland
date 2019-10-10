@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_gcs "cloud.google.com/go/storage"
+	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	server "github.com/AdhityaRamadhanus/userland/server/api"
 	"github.com/AdhityaRamadhanus/userland/server/api/handlers"
@@ -49,6 +51,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	mailingClient := mailing.NewMailingClient(
+		os.Getenv("USERLAND_MAIL_HOST"),
+		mailing.WithClientTimeout(time.Second*5),
+		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
+	)
+
 	// Repositories
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
@@ -59,6 +67,7 @@ func main() {
 	authenticationService := authentication.NewService(
 		authentication.WithUserRepository(userRepository),
 		authentication.WithKeyValueService(keyValueService),
+		authentication.WithMailingClient(mailingClient),
 	)
 	profileService := profile.NewService(
 		profile.WithEventRepository(eventRepository),
