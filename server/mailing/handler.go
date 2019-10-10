@@ -1,4 +1,4 @@
-package api
+package mailing
 
 import (
 	"github.com/gorilla/mux"

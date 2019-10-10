@@ -1,61 +1,67 @@
 package mailing
 
 import (
-	mailjet "github.com/mailjet/mailjet-apiv3-go"
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/gocraft/work"
 )
 
-type From struct {
-	Name    string
-	Address string
-}
-
-type To struct {
-	Name    string
-	Address string
+type MailAddress struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
 }
 
 type SendEmailOption struct {
-	From    From
-	Tos     []To
-	Subject string
-	Content string
-}
-
-type Service interface {
-	SendEmail(opt SendEmailOption) error
+	From         MailAddress            `json:"from"`
+	To           []MailAddress          `json:"to"`
+	Subject      string                 `json:"subject"`
+	Template     string                 `json:"template"`
+	TemplateArgs map[string]interface{} `json:"args"`
 }
 
 type service struct {
-	mailjetClient *mailjet.Client
+	producer *work.Enqueuer
 }
 
-func NewMailingService(client *mailjet.Client) Service {
+type Service interface {
+	SendOTPEmail(recipient MailAddress, otpType string, otp string) error
+}
+
+func NewService(enqueuer *work.Enqueuer) Service {
 	return &service{
-		mailjetClient: client,
+		producer: enqueuer,
 	}
 }
 
-func (s *service) SendEmail(sendOption SendEmailOption) error {
-	recipients := mailjet.RecipientsV31{}
-
-	for _, recipient := range sendOption.Tos {
-		recipients = append(recipients, mailjet.RecipientV31{
-			Email: recipient.Address,
-			Name:  recipient.Name,
-		})
-	}
-	messagesInfo := []mailjet.InfoMessagesV31{
-		mailjet.InfoMessagesV31{
-			From: &mailjet.RecipientV31{
-				Email: sendOption.From.Address,
-				Name:  sendOption.From.Name,
+func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string) error {
+	queueName := os.Getenv("EMAIL_QUEUE")
+	opts := SendEmailOption{
+		From: MailAddress{
+			Name:    "OTP Email from Userland",
+			Address: "adhitya.ramadhanus@gmail.com",
+		},
+		To: []MailAddress{
+			{
+				Name:    recipient.Name,
+				Address: recipient.Address,
 			},
-			To:       &recipients,
-			Subject:  sendOption.Subject,
-			HTMLPart: sendOption.Content,
+		},
+		Subject:  fmt.Sprintf("OTP for %s", otpType),
+		Template: "otp",
+		TemplateArgs: map[string]interface{}{
+			"otp":       otp,
+			"otp_type":  otpType,
+			"recipient": recipient.Name,
 		},
 	}
-	messages := mailjet.MessagesV31{Info: messagesInfo}
-	_, err := s.mailjetClient.SendMailV31(&messages)
+
+	// convert struct to json
+	work := work.Q{}
+	jsonBytes, _ := json.Marshal(opts)
+	json.Unmarshal(jsonBytes, &work)
+
+	_, err := s.producer.Enqueue(queueName, work)
 	return err
 }

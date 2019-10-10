@@ -1,4 +1,4 @@
-package api
+package mailing
 
 import (
 	"net/http"
@@ -8,7 +8,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"github.com/rs/cors"
 )
 
 //Server hold mux Router and information of host port and address of our app
@@ -30,7 +29,7 @@ func NewServer(Handlers []Handler) *Server {
 
 	return &Server{
 		Router: router,
-		Port:   os.Getenv("USERLAND_PORT"),
+		Port:   os.Getenv("USERLAND_MAIL_PORT"),
 	}
 }
 
@@ -40,13 +39,11 @@ func (s *Server) CreateHttpServer() *http.Server {
 		middlewares.PanicHandler,
 		middlewares.Gzip,
 		middlewares.TraceRequest,
-		middlewares.ParseClientInfo,
-		cors.Default().Handler,
 		middlewares.LogRequest,
 	}
 	srv := &http.Server{
 		Handler:      alice.New(middlewares...).Then(s.Router),
-		Addr:         ":" + os.Getenv("USERLAND_PORT"),
+		Addr:         ":" + os.Getenv("USERLAND_MAIL_PORT"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}
