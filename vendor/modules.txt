@@ -12,8 +12,6 @@ github.com/asaskevich/govalidator
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
-# github.com/fsnotify/fsnotify v1.4.7
-github.com/fsnotify/fsnotify
 # github.com/go-redis/redis v6.15.5+incompatible
 github.com/go-redis/redis
 github.com/go-redis/redis/internal
@@ -22,6 +20,8 @@ github.com/go-redis/redis/internal/hashtag
 github.com/go-redis/redis/internal/pool
 github.com/go-redis/redis/internal/proto
 github.com/go-redis/redis/internal/util
+# github.com/gocraft/work v0.5.1
+github.com/gocraft/work
 # github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.1
@@ -31,21 +31,13 @@ github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/gomodule/redigo v2.0.0+incompatible
+github.com/gomodule/redigo/redis
+github.com/gomodule/redigo/internal
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
 # github.com/gorilla/mux v1.7.3
 github.com/gorilla/mux
-# github.com/hashicorp/hcl v1.0.0
-github.com/hashicorp/hcl
-github.com/hashicorp/hcl/hcl/printer
-github.com/hashicorp/hcl/hcl/ast
-github.com/hashicorp/hcl/hcl/parser
-github.com/hashicorp/hcl/hcl/token
-github.com/hashicorp/hcl/json/parser
-github.com/hashicorp/hcl/hcl/scanner
-github.com/hashicorp/hcl/hcl/strconv
-github.com/hashicorp/hcl/json/scanner
-github.com/hashicorp/hcl/json/token
 # github.com/jmoiron/sqlx v1.2.0
 github.com/jmoiron/sqlx
 github.com/jmoiron/sqlx/reflectx
@@ -59,16 +51,16 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
-# github.com/magiconair/properties v1.8.0
-github.com/magiconair/properties
-# github.com/mitchellh/mapstructure v1.1.2
-github.com/mitchellh/mapstructure
-# github.com/pelletier/go-toml v1.2.0
-github.com/pelletier/go-toml
+# github.com/mailjet/mailjet-apiv3-go v0.0.0-20190724151621-55e56f74078c
+github.com/mailjet/mailjet-apiv3-go
+github.com/mailjet/mailjet-apiv3-go/fixtures
+github.com/mailjet/mailjet-apiv3-go/resources
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/robfig/cron v1.2.0
+github.com/robfig/cron
 # github.com/rs/cors v1.7.0
 github.com/rs/cors
 # github.com/satori/go.uuid v1.2.0
@@ -79,20 +71,9 @@ github.com/sirupsen/logrus
 github.com/skip2/go-qrcode
 github.com/skip2/go-qrcode/bitset
 github.com/skip2/go-qrcode/reedsolomon
-# github.com/spf13/afero v1.1.2
-github.com/spf13/afero
-github.com/spf13/afero/mem
-# github.com/spf13/cast v1.3.0
-github.com/spf13/cast
-# github.com/spf13/jwalterweatherman v1.0.0
-github.com/spf13/jwalterweatherman
-# github.com/spf13/pflag v1.0.3
-github.com/spf13/pflag
-# github.com/spf13/viper v1.4.0
-github.com/spf13/viper
 # github.com/stretchr/testify v1.2.2
-github.com/stretchr/testify/suite
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/suite
 github.com/stretchr/testify/require
 # go.opencensus.io v0.22.1
 go.opencensus.io/trace
@@ -132,10 +113,10 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
-golang.org/x/text/transform
-golang.org/x/text/unicode/norm
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
 # google.golang.org/api v0.10.0
 google.golang.org/api/googleapi
 google.golang.org/api/iterator
@@ -196,5 +177,3 @@ google.golang.org/grpc/balancer/base
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
-# gopkg.in/yaml.v2 v2.2.2
-gopkg.in/yaml.v2
