@@ -17,8 +17,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func main() {
+func init() {
 	godotenv.Load()
+	switch os.Getenv("ENV") {
+	case "production":
+		log.SetFormatter(&log.JSONFormatter{})
+		log.SetLevel(log.WarnLevel)
+	default:
+		log.SetLevel(log.DebugLevel)
+		log.SetOutput(os.Stdout)
+	}
+}
+
+func main() {
 	redisAddr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
 	redisPool := &redis.Pool{
 		MaxActive: 5,

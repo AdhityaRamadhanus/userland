@@ -1,7 +1,8 @@
 package session
 
 import (
-	"errors"
+	"github.com/go-errors/errors"
+
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"

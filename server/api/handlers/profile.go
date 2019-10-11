@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
+	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/security"
@@ -655,6 +656,7 @@ func (h *ProfileHandler) handleServiceError(res http.ResponseWriter, req *http.R
 	}
 
 	log.WithFields(log.Fields{
+		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
 		"endpoint":     req.URL.Path,
 		"client":       req.Header.Get("X-API-ClientID"),
 		"x-request-id": req.Header.Get("X-Request-ID"),

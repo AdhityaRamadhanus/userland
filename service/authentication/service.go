@@ -1,13 +1,13 @@
 package authentication
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/AdhityaRamadhanus/userland"
 	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/go-errors/errors"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/NYTimes/gziphandler"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
@@ -38,7 +39,7 @@ func NewServer(Handlers []Handler) *Server {
 func (s *Server) CreateHttpServer() *http.Server {
 	middlewares := []alice.Constructor{
 		middlewares.PanicHandler,
-		middlewares.Gzip,
+		gziphandler.GzipHandler,
 		middlewares.TraceRequest,
 		middlewares.ParseClientInfo,
 		cors.Default().Handler,

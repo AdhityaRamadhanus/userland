@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +12,9 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	"github.com/AdhityaRamadhanus/userland/service/mailing"
 	"github.com/asaskevich/govalidator"
+	"github.com/go-errors/errors"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type MailHandler struct {
@@ -62,7 +65,10 @@ func (h *MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
 	otpType := sendEmailOTPRequest.Type
 	otp := sendEmailOTPRequest.OTP
 
-	h.MailingService.SendOTPEmail(recipient, otpType, otp)
+	if err := h.MailingService.SendOTPEmail(recipient, otpType, otp); err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
@@ -102,6 +108,26 @@ func (h *MailHandler) sendEmailVerification(res http.ResponseWriter, req *http.R
 	}
 	verificationLink := verificationEmailRequest.VerificationLink
 
-	h.MailingService.SendVerificationEmail(recipient, verificationLink)
+	if err := h.MailingService.SendVerificationEmail(recipient, verificationLink); err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+func (h MailHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
+	log.WithFields(log.Fields{
+		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
+		"endpoint":     req.URL.Path,
+		"x-request-id": req.Header.Get("X-Request-ID"),
+	}).WithError(err).Error("Error Mail Handler")
+
+	render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
+		"status": http.StatusInternalServerError,
+		"error": map[string]interface{}{
+			"code":    "ErrInternalServer",
+			"message": "userland mail unable to process the request",
+		},
+	})
+	return
 }

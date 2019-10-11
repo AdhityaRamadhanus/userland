@@ -2,7 +2,8 @@ package profile
 
 import (
 	"encoding/base64"
-	"errors"
+	"github.com/go-errors/errors"
+
 	"fmt"
 	"io"
 	"time"

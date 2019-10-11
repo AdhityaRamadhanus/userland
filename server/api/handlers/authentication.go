@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
@@ -17,6 +20,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
 	"github.com/asaskevich/govalidator"
+	"github.com/go-errors/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -129,12 +133,14 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 		return
 	}
 
-	if _, err = h.AuthenticationService.RequestVerification(requestVerificationRequest.Type, requestVerificationRequest.Recipient); err != nil {
+	verificationType := requestVerificationRequest.Type
+	verificationRecipient := requestVerificationRequest.Recipient
+	if _, err = h.AuthenticationService.RequestVerification(verificationType, verificationRecipient); err != nil {
 		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
+	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.Request) {
@@ -175,7 +181,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
+	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request) {
@@ -215,6 +221,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 		h.handleServiceError(res, req, err)
 		return
 	}
+
 	requireTFA, accessToken, err := h.AuthenticationService.Login(email, password)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -232,13 +239,9 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	}
 
 	defer h.EventService.Log(event.LoginEvent, user.ID, clientInfo)
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"require_tfa": requireTFA,
-		"access_token": map[string]interface{}{
-			"value":      accessToken.Key,
-			"type":       accessToken.Type,
-			"expired_at": accessToken.ExpiredAt,
-		},
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"require_tfa":  requireTFA,
+		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
 	})
 }
 
@@ -283,7 +286,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 			h.EventService.Log(event.ForgotPasswordEvent, user.ID, clientInfo)
 		}
 	}(email, clientInfo)
-	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
+	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.Request) {
@@ -321,13 +324,14 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 		return
 	}
 
-	err = h.AuthenticationService.ResetPassword(resetPasswordRequest.Token, resetPasswordRequest.Password)
-	if err != nil {
+	resetToken := resetPasswordRequest.Token
+	newPassword := resetPasswordRequest.Password
+	if err = h.AuthenticationService.ResetPassword(resetToken, newPassword); err != nil {
 		h.handleServiceError(res, req, err)
 		return
 	}
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
+	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Request) {
@@ -378,12 +382,8 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 		ClientName: clientInfo["client_name"].(string),
 	})
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"access_token": map[string]interface{}{
-			"value":      accessToken.Key,
-			"type":       accessToken.Type,
-			"expired_at": accessToken.ExpiredAt,
-		},
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
 	})
 }
 
@@ -433,12 +433,8 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 		ClientName: clientInfo["client_name"].(string),
 	})
 
-	render.JSON(res, http.StatusCreated, map[string]interface{}{
-		"access_token": map[string]interface{}{
-			"value":      accessToken.Key,
-			"type":       accessToken.Type,
-			"expired_at": accessToken.ExpiredAt,
-		},
+	render.JSON(res, http.StatusOK, map[string]interface{}{
+		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
 	})
 }
 
@@ -482,6 +478,7 @@ func (h AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *
 	}
 
 	log.WithFields(log.Fields{
+		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
 		"endpoint":     req.URL.Path,
 		"client":       req.Header.Get("X-API-ClientID"),
 		"x-request-id": req.Header.Get("X-Request-ID"),
