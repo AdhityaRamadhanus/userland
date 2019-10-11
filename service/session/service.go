@@ -45,6 +45,7 @@ func (s service) CreateSession(userID int, session userland.Session) error {
 
 func (s service) ListSession(userID int) (userland.Sessions, error) {
 	// remove expired sessions
+	s.sessionRepository.DeleteExpiredSessions(userID)
 	return s.sessionRepository.FindAllByUserID(userID)
 }
 

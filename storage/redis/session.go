@@ -3,6 +3,7 @@ package redis
 import (
 	"encoding/json"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -72,6 +73,12 @@ func (s SessionRepository) FindAllByUserID(userID int) (userland.Sessions, error
 	}
 
 	return sessions, nil
+}
+
+func (s SessionRepository) DeleteExpiredSessions(userID int) (err error) {
+	sessionListKey := keygenerator.SessionListKey(userID)
+	nowEpochStr := strconv.FormatInt(time.Now().Unix(), 10)
+	return s.redisClient.ZRemRangeByScore(sessionListKey, "-inf", nowEpochStr).Err()
 }
 
 func (s SessionRepository) DeleteBySessionID(userID int, sessionID string) (err error) {
