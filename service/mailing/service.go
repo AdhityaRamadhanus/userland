@@ -27,6 +27,7 @@ type service struct {
 
 type Service interface {
 	SendOTPEmail(recipient MailAddress, otpType string, otp string) error
+	SendVerificationEmail(recipient MailAddress, verificationLink string) error
 }
 
 func NewService(enqueuer *work.Enqueuer) Service {
@@ -54,6 +55,36 @@ func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string)
 			"otp":       otp,
 			"otp_type":  otpType,
 			"recipient": recipient.Name,
+		},
+	}
+
+	// convert struct to json
+	work := work.Q{}
+	jsonBytes, _ := json.Marshal(opts)
+	json.Unmarshal(jsonBytes, &work)
+
+	_, err := s.producer.Enqueue(queueName, work)
+	return err
+}
+
+func (s service) SendVerificationEmail(recipient MailAddress, verificationLink string) error {
+	queueName := os.Getenv("EMAIL_QUEUE")
+	opts := SendEmailOption{
+		From: MailAddress{
+			Name:    "Verification Email from Userland",
+			Address: "adhitya.ramadhanus@gmail.com",
+		},
+		To: []MailAddress{
+			{
+				Name:    recipient.Name,
+				Address: recipient.Address,
+			},
+		},
+		Subject:  fmt.Sprintf("Verification for %s", recipient.Address),
+		Template: "email_verification",
+		TemplateArgs: map[string]interface{}{
+			"verification_link": verificationLink,
+			"recipient":         recipient.Name,
 		},
 	}
 

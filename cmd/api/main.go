@@ -39,6 +39,11 @@ func main() {
 		Password: os.Getenv("REDIS_PASSWORD"), // no password set
 		DB:       0,                           // use default DB
 	})
+	redisRateLimitClient := _redis.NewClient(&_redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
+		Password: os.Getenv("REDIS_PASSWORD"), // no password set
+		DB:       2,                           // use default DB
+	})
 
 	_, err = redisClient.Ping().Result()
 	if err != nil {
@@ -78,14 +83,18 @@ func main() {
 	sessionService := session.NewService(keyValueService, sessionRepository)
 
 	authenticator := middlewares.NewAuthenticator(keyValueService)
+
+	ratelimiter := middlewares.NewRateLimiter(redisRateLimitClient)
 	healthHandler := handlers.HealthzHandler{}
 	authenticationHandler := handlers.AuthenticationHandler{
+		RateLimiter:           ratelimiter,
 		Authenticator:         authenticator,
 		ProfileService:        profileService,
 		AuthenticationService: authenticationService,
 		SessionService:        sessionService,
 	}
 	profileHandler := handlers.ProfileHandler{
+		RateLimiter:          ratelimiter,
 		Authenticator:        authenticator,
 		ProfileService:       profileService,
 		ObjectStorageService: objectStorageService,

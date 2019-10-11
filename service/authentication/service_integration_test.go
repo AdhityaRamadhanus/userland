@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/pkg/errors"
@@ -67,11 +69,17 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
+	mailingClient := mailing.NewMailingClient(
+		os.Getenv("USERLAND_MAIL_HOST"),
+		mailing.WithClientTimeout(time.Second*5),
+		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
+	)
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
 	authenticationService := authentication.NewService(
 		authentication.WithUserRepository(userRepository),
 		authentication.WithKeyValueService(keyValueService),
+		authentication.WithMailingClient(mailingClient),
 	)
 
 	suite.DB = db
@@ -81,8 +89,6 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	suite.AuthenticationService = authenticationService
 }
 
-// In order for 'go test' to run this suite, we need to create
-// a normal test function and pass our suite to suite.Run
 func TestAuthenticationService(t *testing.T) {
 	suiteTest := new(AuthenticationServiceTestSuite)
 	suite.Run(t, suiteTest)
