@@ -2,11 +2,13 @@ package authentication
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/AdhityaRamadhanus/userland"
 	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -91,7 +93,10 @@ func (s *service) RequestVerification(verificationType string, email string) (ve
 		emailVerificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 		s.keyValueService.SetEx(emailVerificationKey, []byte(code), security.EmailVerificationExpiration)
 		// call mail service here
-		s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "Email Verification", code)
+		verificationLink := fmt.Sprintf("http://localhost:8000/email_verification?code=%s&key=%s", code, verificationID)
+		if err := s.mailingClient.SendVerificationEmail(user.Email, user.Fullname, verificationLink); err != nil {
+			log.WithError(err).Error("Error sending email")
+		}
 		return verificationID, nil
 	default:
 		return "", ErrServiceNotImplemented

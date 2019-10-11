@@ -13,12 +13,9 @@ type Worker struct {
 }
 
 var (
-	templateMap = map[string]struct {
-		TemplateGenerator TemplateGenerator
-	}{
-		"otp": {
-			TemplateGenerator: OTPTemplate,
-		},
+	templateMap = map[string]TemplateGenerator{
+		"otp":                OTPTemplate,
+		"email_verification": EmailVerificationTemplate,
 	}
 )
 
@@ -49,7 +46,7 @@ func (w *Worker) EnquiryJob(job *work.Job) error {
 		return errors.New("Tempalte not found")
 	}
 
-	content, _ := template.TemplateGenerator(sendOption.TemplateArgs)
+	content, _ := template(sendOption.TemplateArgs)
 	messagesInfo := []mailjet.InfoMessagesV31{
 		mailjet.InfoMessagesV31{
 			From: &mailjet.RecipientV31{

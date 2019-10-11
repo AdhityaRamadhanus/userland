@@ -28,3 +28,23 @@ func OTPTemplate(args map[string]interface{}) (string, error) {
 	}
 	return tpl.String(), nil
 }
+
+func EmailVerificationTemplate(args map[string]interface{}) (string, error) {
+	var tpl bytes.Buffer
+	tmpl, err := template.ParseFiles("templates/mailing/email_verification.html")
+	if err != nil {
+		return "", err
+	}
+
+	emailVerificationTempalteArgs := struct {
+		Recipient        string `json:"recipient"`
+		VerificationLink string `json:"verification_link"`
+	}{
+		Recipient:        args["recipient"].(string),
+		VerificationLink: args["verification_link"].(string),
+	}
+	if err = tmpl.Execute(&tpl, emailVerificationTempalteArgs); err != nil {
+		return "", err
+	}
+	return tpl.String(), nil
+}
