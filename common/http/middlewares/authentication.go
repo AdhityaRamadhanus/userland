@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"context"
+
 	"github.com/go-errors/errors"
 
 	"net/http"
@@ -9,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
+	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
