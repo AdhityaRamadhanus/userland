@@ -7,9 +7,11 @@ require (
 	github.com/AdhityaRamadhanus/chronicle v0.0.0-20181104100529-12c91852031a // indirect
 	github.com/AdhityaRamadhanus/godex v0.0.0-20190820083838-58f02e89e36d
 	github.com/NYTimes/gziphandler v1.1.1
+	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-errors/errors v1.0.1
+	github.com/go-kit/kit v0.8.0
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/gocraft/work v0.5.1
 	github.com/gomodule/redigo v2.0.0+incompatible
@@ -24,6 +26,7 @@ require (
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/prometheus/client_golang v0.9.3
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0
