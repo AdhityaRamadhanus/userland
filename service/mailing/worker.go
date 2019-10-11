@@ -2,7 +2,8 @@ package mailing
 
 import (
 	"encoding/json"
-	"errors"
+	"github.com/go-errors/errors"
+
 
 	"github.com/gocraft/work"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"

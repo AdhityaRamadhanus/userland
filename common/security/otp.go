@@ -2,7 +2,8 @@ package security
 
 import (
 	"crypto/rand"
-	"errors"
+	"github.com/go-errors/errors"
+
 	"fmt"
 	"math"
 	"math/big"

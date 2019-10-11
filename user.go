@@ -1,7 +1,8 @@
 package userland
 
 import (
-	"errors"
+	"github.com/go-errors/errors"
+
 	"time"
 )
 

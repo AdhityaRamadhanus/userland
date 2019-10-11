@@ -8,6 +8,7 @@ require (
 	github.com/AdhityaRamadhanus/godex v0.0.0-20190820083838-58f02e89e36d
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-errors/errors v1.0.1
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/gocraft/work v0.5.1
 	github.com/gomodule/redigo v2.0.0+incompatible

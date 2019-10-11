@@ -1,13 +1,13 @@
 package authentication
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/AdhityaRamadhanus/userland"
 	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/go-errors/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -158,6 +158,7 @@ func (s *service) loginNormal(user userland.User) (accessToken security.AccessTo
 }
 
 func (s *service) Login(email, password string) (requireTFA bool, accessToken security.AccessToken, err error) {
+	return false, security.AccessToken{}, errors.New("TEST STACK")
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return false, security.AccessToken{}, err

@@ -4,7 +4,8 @@ import (
 	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
-	"errors"
+	"github.com/go-errors/errors"
+
 	"fmt"
 	"net/http"
 	"time"

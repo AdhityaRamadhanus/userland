@@ -2,7 +2,8 @@ package middlewares
 
 import (
 	"context"
-	"errors"
+	"github.com/go-errors/errors"
+
 	"net/http"
 	"os"
 	"strings"

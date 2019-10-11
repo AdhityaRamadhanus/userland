@@ -27,8 +27,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func main() {
+func init() {
 	godotenv.Load()
+	switch os.Getenv("ENV") {
+	case "production":
+		log.SetFormatter(&log.JSONFormatter{})
+		log.SetLevel(log.WarnLevel)
+	default:
+		log.SetLevel(log.DebugLevel)
+		log.SetOutput(os.Stdout)
+	}
+}
+
+func main() {
 	pgConnString := postgres.CreateConnectionString()
 	db, err := sqlx.Open("postgres", pgConnString)
 	if err != nil {
@@ -48,7 +59,7 @@ func main() {
 
 	_, err = redisClient.Ping().Result()
 	if err != nil {
-		log.WithError(err).Error("Failed to connect to redis")
+		log.Fatal("Failed to connect to redis")
 	}
 
 	ctx := context.Background()

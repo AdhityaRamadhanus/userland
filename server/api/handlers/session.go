@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
+	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
@@ -94,11 +96,7 @@ func (h SessionHandler) createRefreshToken(res http.ResponseWriter, req *http.Re
 	}
 
 	render.JSON(res, http.StatusOK, map[string]interface{}{
-		"access_token": map[string]interface{}{
-			"value":      refreshToken.Key,
-			"type":       refreshToken.Type,
-			"expired_at": refreshToken.ExpiredAt,
-		},
+		"access_token": serializers.SerializeAccessTokenToJSON(refreshToken),
 	})
 }
 
@@ -132,11 +130,7 @@ func (h SessionHandler) createNewAccessToken(res http.ResponseWriter, req *http.
 	// delete prev session
 	h.SessionService.EndSession(user.ID, prevSessionID)
 	render.JSON(res, http.StatusOK, map[string]interface{}{
-		"access_token": map[string]interface{}{
-			"value":      accessToken.Key,
-			"type":       accessToken.Type,
-			"expired_at": accessToken.ExpiredAt,
-		},
+		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
 	})
 }
 
@@ -177,6 +171,7 @@ func (h SessionHandler) handleServiceError(res http.ResponseWriter, req *http.Re
 	}
 
 	log.WithFields(log.Fields{
+		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
 		"endpoint":     req.URL.Path,
 		"client":       req.Header.Get("X-API-ClientID"),
 		"x-request-id": req.Header.Get("X-Request-ID"),
