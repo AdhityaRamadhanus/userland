@@ -246,6 +246,9 @@ func (s service) ForgotPassword(email string) (verificationID string, err error)
 	forgotPassKey := keygenerator.ForgotPasswordKey(verificationID)
 	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), security.ForgotPassExpiration)
 	// call mail service
+	if err := s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "Forgot Password", verificationID); err != nil {
+		log.WithError(err).Error("Error sending email")
+	}
 	return verificationID, nil
 }
 

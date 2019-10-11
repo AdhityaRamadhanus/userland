@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/AdhityaRamadhanus/userland/metrics"
 	_redis "github.com/go-redis/redis"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
@@ -66,6 +68,11 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 		log.WithError(err).Error("Failed to connect to redis")
 	}
 
+	mailingClient := mailing.NewMailingClient(
+		os.Getenv("USERLAND_MAIL_HOST"),
+		mailing.WithClientTimeout(time.Second*5),
+		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
+	)
 	keyValueService := redis.NewKeyValueService(redisClient)
 	eventRepository := postgres.NewEventRepository(db)
 	userRepository := postgres.NewUserRepository(db)
@@ -73,6 +80,7 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 		profile.WithEventRepository(eventRepository),
 		profile.WithUserRepository(userRepository),
 		profile.WithKeyValueService(keyValueService),
+		profile.WithMailingClient(mailingClient),
 	)
 	profileService = profile.NewInstrumentorService(
 		metrics.PrometheusRequestCounter("service", "profile", profile.MetricKeys),

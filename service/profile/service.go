@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
+	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	log "github.com/sirupsen/logrus"
 	qrcode "github.com/skip2/go-qrcode"
 )
 
@@ -21,6 +23,12 @@ var (
 	ErrTFAAlreadyEnabled = errors.New("TFA already enabled")
 	ErrWrongOTP          = errors.New("Wrong OTP")
 )
+
+func WithMailingClient(mailingClient mailing.Client) func(service *service) {
+	return func(service *service) {
+		service.mailingClient = mailingClient
+	}
+}
 
 func WithUserRepository(userRepository userland.UserRepository) func(service *service) {
 	return func(service *service) {
@@ -72,6 +80,7 @@ func NewService(options ...func(*service)) Service {
 }
 
 type service struct {
+	mailingClient        mailing.Client
 	eventRepository      userland.EventRepository
 	userRepository       userland.UserRepository
 	keyValueService      userland.KeyValueService
@@ -101,6 +110,9 @@ func (s service) RequestChangeEmail(user userland.User, newEmail string) (verifi
 	s.keyValueService.SetEx(emailVerificationKey, []byte(newEmail), security.EmailVerificationExpiration)
 
 	// call mail service here
+	if err := s.mailingClient.SendVerificationEmail(user.Email, user.Fullname, verificationID); err != nil {
+		log.WithError(err).Error("Error sending email")
+	}
 	return verificationID, nil
 }
 
