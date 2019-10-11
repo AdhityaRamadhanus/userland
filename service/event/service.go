@@ -30,7 +30,7 @@ type service struct {
 	eventRepository userland.EventRepository
 }
 
-func (s *service) Log(eventName string, userID int, clientInfo map[string]interface{}) error {
+func (s service) Log(eventName string, userID int, clientInfo map[string]interface{}) error {
 	event := userland.Event{
 		UserAgent:  clientInfo["user_agent"].(string),
 		UserID:     userID,

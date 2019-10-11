@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/AdhityaRamadhanus/userland/metrics"
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
@@ -72,6 +73,11 @@ func (suite *ProfileServiceTestSuite) SetupSuite() {
 		profile.WithEventRepository(eventRepository),
 		profile.WithUserRepository(userRepository),
 		profile.WithKeyValueService(keyValueService),
+	)
+	profileService = profile.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("service", "profile", profile.MetricKeys),
+		metrics.PrometheusRequestLatency("service", "profile", profile.MetricKeys),
+		profileService,
 	)
 
 	suite.DB = db

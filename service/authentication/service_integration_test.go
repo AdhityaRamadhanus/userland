@@ -11,6 +11,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
+	"github.com/AdhityaRamadhanus/userland/metrics"
 	"github.com/pkg/errors"
 
 	_redis "github.com/go-redis/redis"
@@ -76,10 +77,16 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	)
 	keyValueService := redis.NewKeyValueService(redisClient)
 	userRepository := postgres.NewUserRepository(db)
+
 	authenticationService := authentication.NewService(
 		authentication.WithUserRepository(userRepository),
 		authentication.WithKeyValueService(keyValueService),
 		authentication.WithMailingClient(mailingClient),
+	)
+	authenticationService = authentication.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("service", "authentication", authentication.MetricKeys),
+		metrics.PrometheusRequestLatency("service", "authentication", authentication.MetricKeys),
+		authenticationService,
 	)
 
 	suite.DB = db
