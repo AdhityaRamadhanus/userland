@@ -2,6 +2,7 @@ package profile
 
 import (
 	"encoding/base64"
+
 	"github.com/go-errors/errors"
 
 	"fmt"
@@ -77,19 +78,19 @@ type service struct {
 	objectStorageService userland.ObjectStorageService
 }
 
-func (s *service) ProfileByEmail(email string) (userland.User, error) {
+func (s service) ProfileByEmail(email string) (userland.User, error) {
 	return s.userRepository.FindByEmail(email)
 }
 
-func (s *service) Profile(userID int) (userland.User, error) {
+func (s service) Profile(userID int) (userland.User, error) {
 	return s.userRepository.Find(userID)
 }
 
-func (s *service) SetProfile(user userland.User) error {
+func (s service) SetProfile(user userland.User) error {
 	return s.userRepository.Update(user)
 }
 
-func (s *service) RequestChangeEmail(user userland.User, newEmail string) (verificationID string, err error) {
+func (s service) RequestChangeEmail(user userland.User, newEmail string) (verificationID string, err error) {
 	_, err = s.userRepository.FindByEmail(newEmail)
 	if err == nil { // user present
 		return "", ErrEmailAlreadyUsed
@@ -103,7 +104,7 @@ func (s *service) RequestChangeEmail(user userland.User, newEmail string) (verif
 	return verificationID, nil
 }
 
-func (s *service) ChangeEmail(user userland.User, verificationID string) error {
+func (s service) ChangeEmail(user userland.User, verificationID string) error {
 	verificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 	newEmail, err := s.keyValueService.Get(verificationKey)
 	if err != nil {
@@ -120,7 +121,7 @@ func (s *service) ChangeEmail(user userland.User, verificationID string) error {
 	return s.userRepository.Update(user)
 }
 
-func (s *service) ChangePassword(user userland.User, oldPassword string, newPassword string) error {
+func (s service) ChangePassword(user userland.User, oldPassword string, newPassword string) error {
 	if err := security.ComparePassword(user.Password, oldPassword); err != nil {
 		return ErrWrongPassword
 	}
@@ -129,7 +130,7 @@ func (s *service) ChangePassword(user userland.User, oldPassword string, newPass
 	return s.userRepository.Update(user)
 }
 
-func (s *service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase64 string, err error) {
+func (s service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase64 string, err error) {
 	if user.TFAEnabled {
 		return "", "", ErrTFAAlreadyEnabled
 	}
@@ -151,7 +152,7 @@ func (s *service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase6
 	return secret, qrcodeImageBase64, nil
 }
 
-func (s *service) ActivateTFA(user userland.User, secret string, code string) ([]string, error) {
+func (s service) ActivateTFA(user userland.User, secret string, code string) ([]string, error) {
 	if user.TFAEnabled {
 		return nil, ErrTFAAlreadyEnabled
 	}
@@ -187,7 +188,7 @@ func (s *service) ActivateTFA(user userland.User, secret string, code string) ([
 	return backupCodes, err
 }
 
-func (s *service) RemoveTFA(user userland.User, currPassword string) error {
+func (s service) RemoveTFA(user userland.User, currPassword string) error {
 	if err := security.ComparePassword(user.Password, currPassword); err != nil {
 		return ErrWrongPassword
 	}
@@ -198,7 +199,7 @@ func (s *service) RemoveTFA(user userland.User, currPassword string) error {
 	return s.userRepository.Update(user)
 }
 
-func (s *service) DeleteAccount(user userland.User, currPassword string) error {
+func (s service) DeleteAccount(user userland.User, currPassword string) error {
 	if err := security.ComparePassword(user.Password, currPassword); err != nil {
 		return ErrWrongPassword
 	}
@@ -212,11 +213,11 @@ func (s *service) DeleteAccount(user userland.User, currPassword string) error {
 	return s.userRepository.Delete(user.ID)
 }
 
-func (s *service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error) {
+func (s service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error) {
 	return s.eventRepository.FindAllByUserID(user.ID, pagingOptions)
 }
 
-func (s *service) SetProfilePicture(user userland.User, image io.Reader) error {
+func (s service) SetProfilePicture(user userland.User, image io.Reader) error {
 	link, err := s.objectStorageService.Write(image, userland.ObjectMetaData{
 		CacheControl: "public, max-age=86400",
 		ContentType:  "image/jpeg",

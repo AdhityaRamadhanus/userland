@@ -11,6 +11,7 @@ import (
 	_gcs "cloud.google.com/go/storage"
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/metrics"
 	server "github.com/AdhityaRamadhanus/userland/server/api"
 	"github.com/AdhityaRamadhanus/userland/server/api/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
@@ -84,23 +85,47 @@ func main() {
 	eventService := event.NewService(
 		event.WithEventRepository(eventRepository),
 	)
+	eventService = event.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("api", "event_service", event.MetricKeys),
+		metrics.PrometheusRequestLatency("api", "event_service", event.MetricKeys),
+		eventService,
+	)
+
 	authenticationService := authentication.NewService(
 		authentication.WithUserRepository(userRepository),
 		authentication.WithKeyValueService(keyValueService),
 		authentication.WithMailingClient(mailingClient),
 	)
+	authenticationService = authentication.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("api", "authentication_service", authentication.MetricKeys),
+		metrics.PrometheusRequestLatency("api", "authentication_service", authentication.MetricKeys),
+		authenticationService,
+	)
+
 	profileService := profile.NewService(
 		profile.WithEventRepository(eventRepository),
 		profile.WithUserRepository(userRepository),
 		profile.WithKeyValueService(keyValueService),
 		profile.WithObjectStorageService(objectStorageService),
 	)
+	profileService = profile.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("api", "profile_service", profile.MetricKeys),
+		metrics.PrometheusRequestLatency("api", "profile_service", profile.MetricKeys),
+		profileService,
+	)
+
 	sessionService := session.NewService(keyValueService, sessionRepository)
+	sessionService = session.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("api", "session_service", profile.MetricKeys),
+		metrics.PrometheusRequestLatency("api", "session_service", profile.MetricKeys),
+		sessionService,
+	)
 
 	authenticator := middlewares.NewAuthenticator(keyValueService)
-
 	ratelimiter := middlewares.NewRateLimiter(redisRateLimitClient)
+
 	healthHandler := handlers.HealthzHandler{}
+	metricHandler := handlers.MetricHandler{}
 	authenticationHandler := handlers.AuthenticationHandler{
 		RateLimiter:           ratelimiter,
 		Authenticator:         authenticator,
@@ -121,6 +146,7 @@ func main() {
 		SessionService: sessionService,
 	}
 	handlers := []server.Handler{
+		metricHandler,
 		healthHandler,
 		authenticationHandler,
 		profileHandler,

@@ -7,12 +7,14 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/AdhityaRamadhanus/userland/metrics"
 	server "github.com/AdhityaRamadhanus/userland/server/mailing"
 	"github.com/AdhityaRamadhanus/userland/server/mailing/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/mailing"
 	"github.com/gocraft/work"
 	"github.com/gomodule/redigo/redis"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,7 +50,11 @@ func main() {
 	enqueuer := work.NewEnqueuer(workerNamespace, redisPool)
 	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_APIKEY_PUBLIC"), os.Getenv("MAILJET_APIKEY_PRIVATE"))
 
-	mailingService := mailing.NewService(enqueuer)
+	mailingService := mailing.NewInstrumentorService(
+		metrics.PrometheusRequestCounter("mailing", "mailing_service", mailing.MetricKeys),
+		metrics.PrometheusRequestLatency("mailing", "mailing_service", mailing.MetricKeys),
+		mailing.NewService(enqueuer),
+	)
 	mailingWorker := mailing.NewWorker(mailjetClient)
 
 	healthHandler := handlers.HealthzHandler{}

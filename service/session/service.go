@@ -3,7 +3,6 @@ package session
 import (
 	"github.com/go-errors/errors"
 
-
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
@@ -36,7 +35,7 @@ type service struct {
 	userRepository    userland.UserRepository
 }
 
-func (s *service) CreateSession(userID int, session userland.Session) error {
+func (s service) CreateSession(userID int, session userland.Session) error {
 	tokenKey := keygenerator.TokenKey(session.ID)
 	if err := s.keyValueService.SetEx(tokenKey, []byte(session.Token), security.UserAccessTokenExpiration); err != nil {
 		return err
@@ -44,12 +43,12 @@ func (s *service) CreateSession(userID int, session userland.Session) error {
 	return s.sessionRepository.Create(userID, session)
 }
 
-func (s *service) ListSession(userID int) (userland.Sessions, error) {
+func (s service) ListSession(userID int) (userland.Sessions, error) {
 	// remove expired sessions
 	return s.sessionRepository.FindAllByUserID(userID)
 }
 
-func (s *service) EndSession(userID int, currentSessionID string) error {
+func (s service) EndSession(userID int, currentSessionID string) error {
 	if err := s.sessionRepository.DeleteBySessionID(userID, currentSessionID); err != nil {
 		return err
 	}
@@ -58,7 +57,7 @@ func (s *service) EndSession(userID int, currentSessionID string) error {
 	return s.keyValueService.Delete(tokenKey)
 }
 
-func (s *service) EndOtherSessions(userID int, currentSessionID string) error {
+func (s service) EndOtherSessions(userID int, currentSessionID string) error {
 	deletedSessionIDs, err := s.sessionRepository.DeleteOtherSessions(userID, currentSessionID)
 	if err != nil {
 		return err
@@ -71,7 +70,7 @@ func (s *service) EndOtherSessions(userID int, currentSessionID string) error {
 	return nil
 }
 
-func (s *service) CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error) {
+func (s service) CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error) {
 	refreshToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
 		Scope:      security.RefreshTokenScope,
 		Expiration: security.RefreshAccessTokenExpiration,
@@ -89,7 +88,7 @@ func (s *service) CreateRefreshToken(user userland.User, currentSessionID string
 	return refreshToken, nil
 }
 
-func (s *service) CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error) {
+func (s service) CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error) {
 	newAccessToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
 		Scope:      security.UserTokenScope,
 		Expiration: security.UserAccessTokenExpiration,
