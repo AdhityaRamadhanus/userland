@@ -18,4 +18,4 @@ data/*
 
 configmap
 secret
-deploy/*
+deploy/gcp/*
