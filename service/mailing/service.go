@@ -41,7 +41,7 @@ func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string)
 	opts := SendEmailOption{
 		From: MailAddress{
 			Name:    "OTP Email from Userland",
-			Address: "adhitya.ramadhanus@gmail.com",
+			Address: os.Getenv("EMAIL_SENDER"),
 		},
 		To: []MailAddress{
 			{
@@ -72,7 +72,7 @@ func (s service) SendVerificationEmail(recipient MailAddress, verificationLink s
 	opts := SendEmailOption{
 		From: MailAddress{
 			Name:    "Verification Email from Userland",
-			Address: "adhitya.ramadhanus@gmail.com",
+			Address: os.Getenv("EMAIL_SENDER"),
 		},
 		To: []MailAddress{
 			{
