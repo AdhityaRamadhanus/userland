@@ -30,6 +30,7 @@ func ParseClientInfo(nextHandler http.Handler) http.Handler {
 			"client_id":   -1,
 			"client_name": "unknown",
 			"ip":          getClientIP(req),
+			"user_agent":  req.Header.Get("User-Agent"),
 		}
 		clientInfo, clientInfoPresent := req.Header["X-API-ClientID"]
 		if clientInfoPresent {

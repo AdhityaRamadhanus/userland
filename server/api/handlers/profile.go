@@ -23,16 +23,18 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
+	"github.com/AdhityaRamadhanus/userland/service/event"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
+
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 type ProfileHandler struct {
-	Authenticator        *middlewares.Authenticator
-	RateLimiter          *middlewares.RateLimiter
-	ProfileService       profile.Service
-	ObjectStorageService userland.ObjectStorageService
+	Authenticator  *middlewares.Authenticator
+	RateLimiter    *middlewares.RateLimiter
+	ProfileService profile.Service
+	EventService   event.Service
 }
 
 func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
@@ -141,7 +143,9 @@ func (h *ProfileHandler) getEmail(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -180,11 +184,14 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 		return
 	}
 
+	defer h.EventService.Log(event.ChangeEmailRequestEvent, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -223,11 +230,14 @@ func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	defer h.EventService.Log(event.ChangeEmailEvent, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
 func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -275,6 +285,7 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
+	defer h.EventService.Log(event.ChangePasswordEvent, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
@@ -296,6 +307,7 @@ func (h *ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request
 
 func (h *ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -315,7 +327,9 @@ func (h *ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -355,11 +369,14 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	defer h.EventService.Log(event.EnableTFAEvent, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"backup_codes": backupCodes})
 }
 
 func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
+
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -398,6 +415,7 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	defer h.EventService.Log(event.DisableTFAEvent, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 

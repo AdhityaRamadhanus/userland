@@ -14,6 +14,7 @@ import (
 	server "github.com/AdhityaRamadhanus/userland/server/api"
 	"github.com/AdhityaRamadhanus/userland/server/api/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
+	"github.com/AdhityaRamadhanus/userland/service/event"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
 	"github.com/AdhityaRamadhanus/userland/storage/gcs"
@@ -69,6 +70,9 @@ func main() {
 	sessionRepository := redis.NewSessionRepository(redisClient)
 	objectStorageService := gcs.NewObjectStorageService(gcsClient, "userland_cdn")
 
+	eventService := event.NewService(
+		event.WithEventRepository(eventRepository),
+	)
 	authenticationService := authentication.NewService(
 		authentication.WithUserRepository(userRepository),
 		authentication.WithKeyValueService(keyValueService),
@@ -92,12 +96,13 @@ func main() {
 		ProfileService:        profileService,
 		AuthenticationService: authenticationService,
 		SessionService:        sessionService,
+		EventService:          eventService,
 	}
 	profileHandler := handlers.ProfileHandler{
-		RateLimiter:          ratelimiter,
-		Authenticator:        authenticator,
-		ProfileService:       profileService,
-		ObjectStorageService: objectStorageService,
+		RateLimiter:    ratelimiter,
+		Authenticator:  authenticator,
+		ProfileService: profileService,
+		EventService:   eventService,
 	}
 	sessionHandler := handlers.SessionHandler{
 		Authenticator:  authenticator,

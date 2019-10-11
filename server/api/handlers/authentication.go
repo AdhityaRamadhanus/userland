@@ -13,6 +13,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
+	"github.com/AdhityaRamadhanus/userland/service/event"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
 	"github.com/asaskevich/govalidator"
@@ -26,6 +27,7 @@ type AuthenticationHandler struct {
 	AuthenticationService authentication.Service
 	SessionService        session.Service
 	ProfileService        profile.Service
+	EventService          event.Service
 }
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
@@ -208,6 +210,11 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 
 	email := loginRequest.Email
 	password := loginRequest.Password
+	user, err := h.ProfileService.ProfileByEmail(email)
+	if err != nil {
+		h.handleServiceError(res, req, err)
+		return
+	}
 	requireTFA, accessToken, err := h.AuthenticationService.Login(email, password)
 	if err != nil {
 		h.handleServiceError(res, req, err)
@@ -215,11 +222,6 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	}
 
 	if !requireTFA {
-		user, err := h.ProfileService.ProfileByEmail(email)
-		if err != nil {
-			h.handleServiceError(res, req, err)
-			return
-		}
 		h.SessionService.CreateSession(user.ID, userland.Session{
 			ID:         accessToken.Key,
 			Token:      accessToken.Value,
@@ -228,6 +230,8 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 			ClientName: clientInfo["client_name"].(string),
 		})
 	}
+
+	defer h.EventService.Log(event.LoginEvent, user.ID, clientInfo)
 	render.JSON(res, http.StatusCreated, map[string]interface{}{
 		"require_tfa": requireTFA,
 		"access_token": map[string]interface{}{
@@ -239,6 +243,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 }
 
 func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http.Request) {
+	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -267,12 +272,17 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 	}
 
 	email := forgotPasswordRequest.Email
-	_, err = h.AuthenticationService.ForgotPassword(email)
-	if err != nil {
+	if _, err = h.AuthenticationService.ForgotPassword(email); err != nil {
 		h.handleServiceError(res, req, err)
 		return
 	}
 
+	defer func(email string, clientInfo map[string]interface{}) {
+		user, err := h.ProfileService.ProfileByEmail(email)
+		if err == nil {
+			h.EventService.Log(event.ForgotPasswordEvent, user.ID, clientInfo)
+		}
+	}(email, clientInfo)
 	render.JSON(res, http.StatusCreated, map[string]interface{}{"success": true})
 }
 
