@@ -24,13 +24,14 @@ type SessionHandler struct {
 
 func (h SessionHandler) RegisterRoutes(router *mux.Router) {
 	authenticate := h.Authenticator.Authenticate
-	authorize := middlewares.Authorize
+	userAuthorize := middlewares.Authorize(security.UserTokenScope)
+	refreshAuthorize := middlewares.Authorize(security.RefreshTokenScope)
 
-	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.listSession))).Methods("GET")
-	router.HandleFunc("/me/session", authenticate(authorize(security.UserTokenScope, h.endCurrentSession))).Methods("DELETE")
-	router.HandleFunc("/me/session/other", authenticate(authorize(security.UserTokenScope, h.endOtherSession))).Methods("DELETE")
-	router.HandleFunc("/me/session/refresh_token", authenticate(authorize(security.UserTokenScope, h.createRefreshToken))).Methods("GET")
-	router.HandleFunc("/me/session/access_token", authenticate(authorize(security.RefreshTokenScope, h.createNewAccessToken))).Methods("GET")
+	router.HandleFunc("/me/session", authenticate(userAuthorize(h.listSession))).Methods("GET")
+	router.HandleFunc("/me/session", authenticate(userAuthorize(h.endCurrentSession))).Methods("DELETE")
+	router.HandleFunc("/me/session/other", authenticate(userAuthorize(h.endOtherSession))).Methods("DELETE")
+	router.HandleFunc("/me/session/refresh_token", authenticate(userAuthorize(h.createRefreshToken))).Methods("GET")
+	router.HandleFunc("/me/session/access_token", authenticate(refreshAuthorize(h.createNewAccessToken))).Methods("GET")
 }
 
 func (h SessionHandler) listSession(res http.ResponseWriter, req *http.Request) {

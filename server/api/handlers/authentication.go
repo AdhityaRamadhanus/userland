@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
@@ -21,6 +22,7 @@ import (
 
 type AuthenticationHandler struct {
 	Authenticator         *middlewares.Authenticator
+	RateLimiter           *middlewares.RateLimiter
 	AuthenticationService authentication.Service
 	SessionService        session.Service
 	ProfileService        profile.Service
@@ -28,19 +30,21 @@ type AuthenticationHandler struct {
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	authenticate := h.Authenticator.Authenticate
-	authorize := middlewares.Authorize
+	tfaAuthorize := middlewares.Authorize(security.TFATokenScope)
+	ratelimit3PerMinute := h.RateLimiter.Limit(10, time.Minute)
+
 	router.HandleFunc("/auth/register", h.registerUser).Methods("POST")
 
-	router.HandleFunc("/auth/verification", h.requestVerification).Methods("POST")
+	router.HandleFunc("/auth/verification", ratelimit3PerMinute(h.requestVerification)).Methods("POST")
 	router.HandleFunc("/auth/verification", h.verifyAccount).Methods("PATCH")
 
 	router.HandleFunc("/auth/login", h.login).Methods("POST")
 
-	router.HandleFunc("/auth/password/forgot", h.forgotPassword).Methods("POST")
+	router.HandleFunc("/auth/password/forgot", ratelimit3PerMinute(h.forgotPassword)).Methods("POST")
 	router.HandleFunc("/auth/password/reset", h.resetPassword).Methods("POST")
 
-	router.HandleFunc("/auth/tfa/verify", authenticate(authorize(security.TFATokenScope, h.verifyTFA))).Methods("POST")
-	router.HandleFunc("/auth/tfa/bypass", authenticate(authorize(security.TFATokenScope, h.verifyTFABypass))).Methods("POST")
+	router.HandleFunc("/auth/tfa/verify", authenticate(tfaAuthorize(h.verifyTFA))).Methods("POST")
+	router.HandleFunc("/auth/tfa/bypass", authenticate(tfaAuthorize(h.verifyTFABypass))).Methods("POST")
 }
 
 func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.Request) {
