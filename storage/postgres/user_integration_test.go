@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -31,19 +32,24 @@ func (suite *UserRepositoryTestSuite) SetupTest() {
 	}
 }
 
+func (suite *UserRepositoryTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		postgres.ConnectionBuilder,
+		postgres.UserRepositoryBuilder,
+	)
+
+	return builder.Build()
+}
+
 func (suite *UserRepositoryTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
-	pgConnString := postgres.CreateConnectionString()
-	db, err := sqlx.Open("postgres", pgConnString)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctn := suite.BuildContainer()
 
 	// Repositories
-	userRepository := postgres.NewUserRepository(db)
-	suite.DB = db
-	suite.UserRepository = userRepository
+	suite.DB = ctn.Get("postgres-connection").(*sqlx.DB)
+	suite.UserRepository = ctn.Get("user-repository").(userland.UserRepository)
 }
 
 func TestUserRepository(t *testing.T) {

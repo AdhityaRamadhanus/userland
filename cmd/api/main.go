@@ -1,17 +1,13 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	_gcs "cloud.google.com/go/storage"
+	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
-	"github.com/AdhityaRamadhanus/userland/metrics"
 	server "github.com/AdhityaRamadhanus/userland/server/api"
 	"github.com/AdhityaRamadhanus/userland/server/api/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
@@ -22,11 +18,36 @@ import (
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	_redis "github.com/go-redis/redis"
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/sarulabs/di"
 	log "github.com/sirupsen/logrus"
 )
+
+func buildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		postgres.ConnectionBuilder,
+		redis.ConnectionBuilder("redis-connection", 0),
+		redis.ConnectionBuilder("redis-rate-limit-connection", 2),
+		gcs.ServiceBuilder,
+		mailing.ClientBuilder,
+		redis.KeyValueServiceBuilder,
+		postgres.UserRepositoryBuilder,
+		postgres.EventRepositoryBuilder,
+		redis.SessionRepositoryBuilder,
+		authentication.ServiceBuilder,
+		authentication.ServiceInstrumentorBuilder,
+		session.ServiceBuilder,
+		session.ServiceInstrumentorBuilder,
+		profile.ServiceBuilder,
+		profile.ServiceInstrumentorBuilder,
+		event.ServiceBuilder,
+		event.ServiceInstrumentorBuilder,
+	)
+
+	return builder.Build()
+}
 
 func init() {
 	godotenv.Load()
@@ -41,112 +62,31 @@ func init() {
 }
 
 func main() {
-	pgConnString := postgres.CreateConnectionString()
-	db, err := sqlx.Open("postgres", pgConnString)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctn := buildContainer()
 
-	redisClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       0,                           // use default DB
-	})
-	redisRateLimitClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       2,                           // use default DB
-	})
-
-	_, err = redisClient.Ping().Result()
-	if err != nil {
-		log.Fatal("Failed to connect to redis")
-	}
-
-	ctx := context.Background()
-	gcsClient, err := _gcs.NewClient(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mailingClient := mailing.NewMailingClient(
-		os.Getenv("USERLAND_MAIL_HOST"),
-		mailing.WithClientTimeout(time.Second*5),
-		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
-	)
-
-	// Repositories
-	keyValueService := redis.NewKeyValueService(redisClient)
-	userRepository := postgres.NewUserRepository(db)
-	eventRepository := postgres.NewEventRepository(db)
-	sessionRepository := redis.NewSessionRepository(redisClient)
-	objectStorageService := gcs.NewObjectStorageService(gcsClient, "userland_cdn")
-
-	eventService := event.NewService(
-		event.WithEventRepository(eventRepository),
-	)
-	eventService = event.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("api", "event_service", event.MetricKeys),
-		metrics.PrometheusRequestLatency("api", "event_service", event.MetricKeys),
-		eventService,
-	)
-
-	authenticationService := authentication.NewService(
-		authentication.WithUserRepository(userRepository),
-		authentication.WithKeyValueService(keyValueService),
-		authentication.WithMailingClient(mailingClient),
-	)
-	authenticationService = authentication.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("api", "authentication_service", authentication.MetricKeys),
-		metrics.PrometheusRequestLatency("api", "authentication_service", authentication.MetricKeys),
-		authenticationService,
-	)
-
-	profileService := profile.NewService(
-		profile.WithEventRepository(eventRepository),
-		profile.WithUserRepository(userRepository),
-		profile.WithKeyValueService(keyValueService),
-		profile.WithObjectStorageService(objectStorageService),
-	)
-	profileService = profile.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("api", "profile_service", profile.MetricKeys),
-		metrics.PrometheusRequestLatency("api", "profile_service", profile.MetricKeys),
-		profileService,
-	)
-
-	sessionService := session.NewService(
-		session.WithKeyValueService(keyValueService),
-		session.WithSessionRepository(sessionRepository),
-	)
-	sessionService = session.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("api", "session_service", profile.MetricKeys),
-		metrics.PrometheusRequestLatency("api", "session_service", profile.MetricKeys),
-		sessionService,
-	)
-
-	authenticator := middlewares.NewAuthenticator(keyValueService)
-	ratelimiter := middlewares.NewRateLimiter(redisRateLimitClient)
+	authenticator := middlewares.NewAuthenticator(ctn.Get("keyvalue-service").(userland.KeyValueService))
+	ratelimiter := middlewares.NewRateLimiter(ctn.Get("redis-rate-limit-connection").(*_redis.Client))
 
 	healthHandler := handlers.HealthzHandler{}
 	metricHandler := handlers.MetricHandler{}
 	authenticationHandler := handlers.AuthenticationHandler{
 		RateLimiter:           ratelimiter,
 		Authenticator:         authenticator,
-		ProfileService:        profileService,
-		AuthenticationService: authenticationService,
-		SessionService:        sessionService,
-		EventService:          eventService,
+		ProfileService:        ctn.Get("profile-service").(profile.Service),
+		AuthenticationService: ctn.Get("authentication-service").(authentication.Service),
+		SessionService:        ctn.Get("session-service").(session.Service),
+		EventService:          ctn.Get("event-service").(event.Service),
 	}
 	profileHandler := handlers.ProfileHandler{
 		RateLimiter:    ratelimiter,
 		Authenticator:  authenticator,
-		ProfileService: profileService,
-		EventService:   eventService,
+		ProfileService: ctn.Get("profile-service").(profile.Service),
+		EventService:   ctn.Get("event-service").(event.Service),
 	}
 	sessionHandler := handlers.SessionHandler{
 		Authenticator:  authenticator,
-		ProfileService: profileService,
-		SessionService: sessionService,
+		ProfileService: ctn.Get("profile-service").(profile.Service),
+		SessionService: ctn.Get("session-service").(session.Service),
 	}
 	handlers := []server.Handler{
 		metricHandler,

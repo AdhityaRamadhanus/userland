@@ -3,12 +3,10 @@
 package session_test
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/metrics"
+	"github.com/sarulabs/di"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/joho/godotenv"
@@ -21,15 +19,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// keyValueService   userland.KeyValueService
-// sessionRepository userland.SessionRepository
-// userRepository    userland.UserRepository
-
 type SessionServiceTestSuite struct {
 	suite.Suite
 	RedisClient       *_redis.Client
-	KeyValueService   *redis.KeyValueService
-	SessionRepository *redis.SessionRepository
+	KeyValueService   userland.KeyValueService
+	SessionRepository userland.SessionRepository
 	SessionService    session.Service
 }
 
@@ -39,50 +33,34 @@ func (suite *SessionServiceTestSuite) SetupTest() {
 	}
 }
 
+func (suite *SessionServiceTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		redis.ConnectionBuilder,
+		redis.KeyValueServiceBuilder,
+		redis.SessionRepositoryBuilder,
+		session.ServiceBuilder,
+		session.ServiceInstrumentorBuilder,
+	)
+
+	return builder.Build()
+}
+
 // before each test
 func (suite *SessionServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
-	os.Setenv("ENV", "testing")
 
-	redisClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("TEST_REDIS_HOST"), os.Getenv("TEST_REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       0,                           // use default DB
-	})
-
-	if _, err := redisClient.Ping().Result(); err != nil {
-		log.WithError(err).Error("Failed to connect to redis")
-	}
-
-	keyValueService := redis.NewKeyValueService(redisClient)
-	sessionRepository := redis.NewSessionRepository(redisClient)
-
-	sessionService := session.NewService(
-		session.WithSessionRepository(sessionRepository),
-		session.WithKeyValueService(keyValueService),
-	)
-	sessionService = session.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("service", "session", session.MetricKeys),
-		metrics.PrometheusRequestLatency("service", "session", session.MetricKeys),
-		sessionService,
-	)
-
-	suite.RedisClient = redisClient
-	suite.KeyValueService = keyValueService
-	suite.SessionService = sessionService
+	ctn := suite.BuildContainer()
+	suite.RedisClient = ctn.Get("redis-connection").(*_redis.Client)
+	suite.KeyValueService = ctn.Get("keyvalue-service").(userland.KeyValueService)
+	suite.SessionRepository = ctn.Get("session-repository").(userland.SessionRepository)
+	suite.SessionService = ctn.Get("session-instrumentor-service").(session.Service)
 }
 
 func TestSessionService(t *testing.T) {
 	suiteTest := new(SessionServiceTestSuite)
 	suite.Run(t, suiteTest)
 }
-
-// CreateSession(userID int, session userland.Session) error
-// ListSession(userID int) (userland.Sessions, error)
-// EndSession(userID int, currentSessionID string) error
-// EndOtherSessions(userID int, currentSessionID string) error
-// CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error)
-// CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error)
 
 func (suite *SessionServiceTestSuite) TestCreateSession() {
 	testCases := []struct {

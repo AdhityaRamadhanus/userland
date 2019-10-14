@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -24,6 +25,16 @@ type EventRepositoryTestSuite struct {
 	EventRepository userland.EventRepository
 }
 
+func (suite *EventRepositoryTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		postgres.ConnectionBuilder,
+		postgres.EventRepositoryBuilder,
+	)
+
+	return builder.Build()
+}
+
 func (suite *EventRepositoryTestSuite) SetupTest() {
 	_, err := suite.DB.Query("DELETE FROM events")
 	if err != nil {
@@ -34,16 +45,11 @@ func (suite *EventRepositoryTestSuite) SetupTest() {
 func (suite *EventRepositoryTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
-	pgConnString := postgres.CreateConnectionString()
-	db, err := sqlx.Open("postgres", pgConnString)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Repositories
-	eventRepository := postgres.NewEventRepository(db)
-	suite.DB = db
-	suite.EventRepository = eventRepository
+	ctn := suite.BuildContainer()
+	suite.DB = ctn.Get("postgres-connection").(*sqlx.DB)
+	suite.EventRepository = ctn.Get("event-repository").(userland.EventRepository)
 }
 
 func TestEventRepository(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/AdhityaRamadhanus/userland/metrics"
 	"github.com/gocraft/work"
 	"github.com/gomodule/redigo/redis"
+	"github.com/sarulabs/di"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -25,35 +25,54 @@ type MailingServiceTestSuite struct {
 	MailingService mailing.Service
 }
 
+func (suite *MailingServiceTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		di.Def{
+			Name:  "redis-pool-connection",
+			Scope: di.App,
+			Build: func(ctn di.Container) (interface{}, error) {
+				redisAddr := fmt.Sprintf("%s:%s", os.Getenv("TEST_REDIS_HOST"), os.Getenv("TEST_REDIS_PORT"))
+				redisPool := &redis.Pool{
+					MaxActive: 5,
+					MaxIdle:   5,
+					Wait:      true,
+					Dial: func() (redis.Conn, error) {
+						return redis.Dial(
+							"tcp",
+							redisAddr,
+							redis.DialDatabase(1),
+						)
+					},
+				}
+				return redisPool, nil
+			},
+		},
+		di.Def{
+			Name:  "work-enqueuer",
+			Scope: di.App,
+			Build: func(ctn di.Container) (interface{}, error) {
+				workerNamespace := "userland-mail-worker"
+				redisPool := ctn.Get("redis-pool-connection").(*redis.Pool)
+				enqueuer := work.NewEnqueuer(workerNamespace, redisPool)
+				return enqueuer, nil
+			},
+		},
+		mailing.ServiceBuilder,
+		mailing.ServiceInstrumentorBuilder,
+	)
+
+	return builder.Build()
+}
+
 // before each test
 func (suite *MailingServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
-	redisAddr := fmt.Sprintf("%s:%s", os.Getenv("TEST_REDIS_HOST"), os.Getenv("TEST_REDIS_PORT"))
-	redisPool := &redis.Pool{
-		MaxActive: 5,
-		MaxIdle:   5,
-		Wait:      true,
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial(
-				"tcp",
-				redisAddr,
-				redis.DialDatabase(1),
-			)
-		},
-	}
 
-	workerNamespace := "userland-mail-worker"
-	enqueuer := work.NewEnqueuer(workerNamespace, redisPool)
-
-	mailingService := mailing.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("mailing", "mailing_service", mailing.MetricKeys),
-		metrics.PrometheusRequestLatency("mailing", "mailing_service", mailing.MetricKeys),
-		mailing.NewService(enqueuer),
-	)
-
-	suite.Enqueuer = enqueuer
-	suite.MailingService = mailingService
+	ctn := suite.BuildContainer()
+	suite.Enqueuer = ctn.Get("work-enqueuer").(*work.Enqueuer)
+	suite.MailingService = ctn.Get("mailing-instrumentor-service").(mailing.Service)
 }
 
 func TestMailingService(t *testing.T) {

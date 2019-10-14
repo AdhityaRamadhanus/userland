@@ -3,13 +3,12 @@
 package redis_test
 
 import (
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
+	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
 	_redis "github.com/go-redis/redis"
@@ -31,23 +30,22 @@ func (suite *KeyValueServiceTestSuite) SetupTest() {
 	}
 }
 
+func (suite *KeyValueServiceTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		redis.ConnectionBuilder,
+		redis.KeyValueServiceBuilder,
+	)
+
+	return builder.Build()
+}
+
 func (suite *KeyValueServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
-	redisClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       0,                           // use default DB
-	})
 
-	_, err := redisClient.Ping().Result()
-	if err != nil {
-		log.WithError(err).Error("Failed to connect to redis")
-	}
-
-	keyValueService := redis.NewKeyValueService(redisClient)
-
-	suite.RedisClient = redisClient
-	suite.KeyValueService = keyValueService
+	ctn := suite.BuildContainer()
+	suite.RedisClient = ctn.Get("redis-connection").(*_redis.Client)
+	suite.KeyValueService = ctn.Get("keyvalue-service").(userland.KeyValueService)
 }
 
 func TestKeyValueService(t *testing.T) {

@@ -15,6 +15,7 @@ require (
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/gocraft/work v0.5.1
 	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gorilla/mux v1.7.3
@@ -29,6 +30,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/cors v1.7.0
+	github.com/sarulabs/di v2.0.0+incompatible
 	github.com/satori/go.uuid v1.2.0
 	github.com/sebest/logrusly v0.0.0-20180315190218-3235eccb8edc // indirect
 	github.com/segmentio/go-loggly v0.5.0 // indirect

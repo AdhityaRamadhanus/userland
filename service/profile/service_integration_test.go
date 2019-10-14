@@ -3,23 +3,23 @@
 package profile_test
 
 import (
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/AdhityaRamadhanus/userland/metrics"
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
 	"github.com/AdhityaRamadhanus/userland/service/profile"
+	"github.com/AdhityaRamadhanus/userland/storage/gcs"
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/storage/redis"
 	log "github.com/sirupsen/logrus"
@@ -29,11 +29,10 @@ type ProfileServiceTestSuite struct {
 	suite.Suite
 	DB              *sqlx.DB
 	RedisClient     *_redis.Client
-	EventRepository *postgres.EventRepository
-	UserRepository  *postgres.UserRepository
-	KeyValueService *redis.KeyValueService
+	EventRepository userland.EventRepository
+	UserRepository  userland.UserRepository
+	KeyValueService userland.KeyValueService
 	ProfileService  profile.Service
-	currentUserID   int
 }
 
 func (suite *ProfileServiceTestSuite) SetupTest() {
@@ -48,51 +47,34 @@ func (suite *ProfileServiceTestSuite) SetupTest() {
 	}
 }
 
+func (suite *ProfileServiceTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		postgres.ConnectionBuilder,
+		redis.ConnectionBuilder,
+		mailing.ClientBuilder,
+		redis.KeyValueServiceBuilder,
+		postgres.UserRepositoryBuilder,
+		postgres.EventRepositoryBuilder,
+		gcs.ServiceBuilder,
+		profile.ServiceBuilder,
+		profile.ServiceInstrumentorBuilder,
+	)
+
+	return builder.Build()
+}
+
 func (suite *ProfileServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
-	pgConnString := postgres.CreateConnectionString()
-	db, err := sqlx.Open("postgres", pgConnString)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	redisClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       0,                           // use default DB
-	})
-
-	_, err = redisClient.Ping().Result()
-	if err != nil {
-		log.WithError(err).Error("Failed to connect to redis")
-	}
-
-	mailingClient := mailing.NewMailingClient(
-		os.Getenv("USERLAND_MAIL_HOST"),
-		mailing.WithClientTimeout(time.Second*5),
-		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
-	)
-	keyValueService := redis.NewKeyValueService(redisClient)
-	eventRepository := postgres.NewEventRepository(db)
-	userRepository := postgres.NewUserRepository(db)
-	profileService := profile.NewService(
-		profile.WithEventRepository(eventRepository),
-		profile.WithUserRepository(userRepository),
-		profile.WithKeyValueService(keyValueService),
-		profile.WithMailingClient(mailingClient),
-	)
-	profileService = profile.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("service", "profile", profile.MetricKeys),
-		metrics.PrometheusRequestLatency("service", "profile", profile.MetricKeys),
-		profileService,
-	)
-
-	suite.DB = db
-	suite.RedisClient = redisClient
-	suite.KeyValueService = keyValueService
-	suite.EventRepository = eventRepository
-	suite.ProfileService = profileService
+	ctn := suite.BuildContainer()
+	suite.DB = ctn.Get("postgres-connection").(*sqlx.DB)
+	suite.RedisClient = ctn.Get("redis-connection").(*_redis.Client)
+	suite.KeyValueService = ctn.Get("keyvalue-service").(userland.KeyValueService)
+	suite.UserRepository = ctn.Get("user-repository").(userland.UserRepository)
+	suite.EventRepository = ctn.Get("event-repository").(userland.EventRepository)
+	suite.ProfileService = ctn.Get("profile-instrumentor-service").(profile.Service)
 }
 
 func TestProfileService(t *testing.T) {

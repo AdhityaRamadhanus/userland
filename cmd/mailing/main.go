@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/AdhityaRamadhanus/userland/metrics"
 	server "github.com/AdhityaRamadhanus/userland/server/mailing"
 	"github.com/AdhityaRamadhanus/userland/server/mailing/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/mailing"
@@ -16,8 +15,57 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"
+	"github.com/sarulabs/di"
 	log "github.com/sirupsen/logrus"
 )
+
+func buildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		di.Def{
+			Name:  "redis-pool-connection",
+			Scope: di.App,
+			Build: func(ctn di.Container) (interface{}, error) {
+				redisAddr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
+				redisPool := &redis.Pool{
+					MaxActive: 5,
+					MaxIdle:   5,
+					Wait:      true,
+					Dial: func() (redis.Conn, error) {
+						return redis.Dial(
+							"tcp",
+							redisAddr,
+							redis.DialDatabase(1),
+						)
+					},
+				}
+				return redisPool, nil
+			},
+		},
+		di.Def{
+			Name:  "work-enqueuer",
+			Scope: di.App,
+			Build: func(ctn di.Container) (interface{}, error) {
+				redisPool := ctn.Get("redis-pool-connection").(*redis.Pool)
+				enqueuer := work.NewEnqueuer(os.Getenv("MAIL_WORKER_SPACE"), redisPool)
+				return enqueuer, nil
+			},
+		},
+		di.Def{
+			Name:  "mailjet-client",
+			Scope: di.App,
+			Build: func(ctn di.Container) (interface{}, error) {
+				mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_APIKEY_PUBLIC"), os.Getenv("MAILJET_APIKEY_PRIVATE"))
+				return mailjetClient, nil
+			},
+		},
+		mailing.ServiceBuilder,
+		mailing.ServiceInstrumentorBuilder,
+		mailing.WorkerBuilder,
+	)
+
+	return builder.Build()
+}
 
 func init() {
 	godotenv.Load()
@@ -32,34 +80,13 @@ func init() {
 }
 
 func main() {
-	redisAddr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
-	redisPool := &redis.Pool{
-		MaxActive: 5,
-		MaxIdle:   5,
-		Wait:      true,
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial(
-				"tcp",
-				redisAddr,
-				redis.DialDatabase(1),
-			)
-		},
-	}
+	ctn := buildContainer()
 
-	workerNamespace := "userland-mail-worker"
-	enqueuer := work.NewEnqueuer(workerNamespace, redisPool)
-	mailjetClient := mailjet.NewMailjetClient(os.Getenv("MAILJET_APIKEY_PUBLIC"), os.Getenv("MAILJET_APIKEY_PRIVATE"))
-
-	mailingService := mailing.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("mailing", "mailing_service", mailing.MetricKeys),
-		metrics.PrometheusRequestLatency("mailing", "mailing_service", mailing.MetricKeys),
-		mailing.NewService(enqueuer),
-	)
-	mailingWorker := mailing.NewWorker(mailjetClient)
-
+	redisPool := ctn.Get("redis-pool-connection").(*redis.Pool)
+	mailingWorker := ctn.Get("mailing-worker").(*mailing.Worker)
 	healthHandler := handlers.HealthzHandler{}
 	mailingHandler := handlers.MailHandler{
-		MailingService: mailingService,
+		MailingService: ctn.Get("mailing-service").(mailing.Service),
 	}
 	handlers := []server.Handler{
 		healthHandler,
@@ -69,7 +96,7 @@ func main() {
 	server := server.NewServer(handlers)
 	srv := server.CreateHttpServer()
 
-	pool := work.NewWorkerPool(struct{}{}, uint(runtime.NumCPU()), workerNamespace, redisPool)
+	pool := work.NewWorkerPool(struct{}{}, uint(runtime.NumCPU()), os.Getenv("MAIL_WORKER_SPACE"), redisPool)
 	// Map the name of jobs to handler functions
 	pool.Job(os.Getenv("EMAIL_QUEUE"), mailingWorker.EnquiryJob)
 

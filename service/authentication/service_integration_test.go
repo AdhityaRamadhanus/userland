@@ -3,21 +3,19 @@
 package authentication_test
 
 import (
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/metrics"
 	"github.com/pkg/errors"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/sarulabs/di"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/service/authentication"
@@ -31,8 +29,8 @@ type AuthenticationServiceTestSuite struct {
 	suite.Suite
 	DB                    *sqlx.DB
 	RedisClient           *_redis.Client
-	UserRepository        *postgres.UserRepository
-	KeyValueService       *redis.KeyValueService
+	UserRepository        userland.UserRepository
+	KeyValueService       userland.KeyValueService
 	AuthenticationService authentication.Service
 }
 
@@ -48,51 +46,33 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 	}
 }
 
+func (suite *AuthenticationServiceTestSuite) BuildContainer() di.Container {
+	builder, _ := di.NewBuilder()
+	builder.Add(
+		postgres.ConnectionBuilder,
+		redis.ConnectionBuilder,
+		mailing.ClientBuilder,
+		redis.KeyValueServiceBuilder,
+		postgres.UserRepositoryBuilder,
+		authentication.ServiceBuilder,
+		authentication.ServiceInstrumentorBuilder,
+	)
+
+	return builder.Build()
+}
+
 // before each test
 func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")
 	os.Setenv("ENV", "testing")
-	pgConnString := postgres.CreateConnectionString()
-	db, err := sqlx.Open("postgres", pgConnString)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	redisClient := _redis.NewClient(&_redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"), // no password set
-		DB:       0,                           // use default DB
-	})
+	ctn := suite.BuildContainer()
 
-	_, err = redisClient.Ping().Result()
-	if err != nil {
-		log.WithError(err).Error("Failed to connect to redis")
-	}
-
-	mailingClient := mailing.NewMailingClient(
-		os.Getenv("USERLAND_MAIL_HOST"),
-		mailing.WithClientTimeout(time.Second*5),
-		mailing.WithBasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS")),
-	)
-	keyValueService := redis.NewKeyValueService(redisClient)
-	userRepository := postgres.NewUserRepository(db)
-
-	authenticationService := authentication.NewService(
-		authentication.WithUserRepository(userRepository),
-		authentication.WithKeyValueService(keyValueService),
-		authentication.WithMailingClient(mailingClient),
-	)
-	authenticationService = authentication.NewInstrumentorService(
-		metrics.PrometheusRequestCounter("service", "authentication", authentication.MetricKeys),
-		metrics.PrometheusRequestLatency("service", "authentication", authentication.MetricKeys),
-		authenticationService,
-	)
-
-	suite.DB = db
-	suite.RedisClient = redisClient
-	suite.KeyValueService = keyValueService
-	suite.UserRepository = userRepository
-	suite.AuthenticationService = authenticationService
+	suite.DB = ctn.Get("postgres-connection").(*sqlx.DB)
+	suite.RedisClient = ctn.Get("redis-connection").(*_redis.Client)
+	suite.KeyValueService = ctn.Get("keyvalue-service").(userland.KeyValueService)
+	suite.UserRepository = ctn.Get("user-repository").(userland.UserRepository)
+	suite.AuthenticationService = ctn.Get("authentication-instrumentor-service").(authentication.Service)
 }
 
 func TestAuthenticationService(t *testing.T) {
