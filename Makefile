@@ -35,7 +35,7 @@ endif
 # Test Packages
 
 unit-test:
-	go test -count=1 -v --cover ./... -tags="unit"
+	@go test -count=1 -v --cover ./... -tags="unit" | { grep -v 'no test files'; true; }
 
 service-integration-test:
 	@go test ./... -count=1 -v --cover -tags="authentication_service" | { grep -v 'no test files'; true; }

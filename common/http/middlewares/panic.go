@@ -12,7 +12,7 @@ func PanicHandler(nextHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.WithError(err.(error)).Errorf("Panic error %s", "s")
+				log.WithError(err.(error)).Errorf("Panic error %s", err.(error).Error())
 				render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
 					"status": http.StatusInternalServerError,
 					"error": map[string]interface{}{
