@@ -1,4 +1,4 @@
-// +build all service profile
+// +build all profile_service
 
 package profile_test
 

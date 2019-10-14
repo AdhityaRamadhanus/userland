@@ -1,4 +1,4 @@
-// +build all service authentication
+// +build all authentication_service
 
 package authentication_test
 
@@ -48,7 +48,6 @@ func (suite *AuthenticationServiceTestSuite) SetupTest() {
 	}
 }
 
-// Make sure that VariableThatShouldStartAtFive is set to five
 // before each test
 func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	godotenv.Load("../../.env")

@@ -114,7 +114,10 @@ func main() {
 		profileService,
 	)
 
-	sessionService := session.NewService(keyValueService, sessionRepository)
+	sessionService := session.NewService(
+		session.WithKeyValueService(keyValueService),
+		session.WithSessionRepository(sessionRepository),
+	)
 	sessionService = session.NewInstrumentorService(
 		metrics.PrometheusRequestCounter("api", "session_service", profile.MetricKeys),
 		metrics.PrometheusRequestLatency("api", "session_service", profile.MetricKeys),

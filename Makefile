@@ -38,8 +38,11 @@ unit-test:
 	go test -count=1 -v --cover ./... -tags="unit"
 
 service-integration-test:
-	@go test ./... -count=1 -v --cover -tags="authentication" | { grep -v 'no test files'; true; }
-	@go test ./... -count=1 -v --cover -tags="profile" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="authentication_service" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="profile_service" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="session_service" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="event_service" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="mailing_service" | { grep -v 'no test files'; true; }
 
 repository-integration-test:
 	@go test ./... -count=1 -v --cover -tags="redis_repository" | { grep -v 'no test files'; true; }
