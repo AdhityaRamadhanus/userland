@@ -1,4 +1,4 @@
-// +build all repository
+// +build all user postgres_repository
 
 package postgres_test
 
@@ -51,7 +51,7 @@ func TestUserRepository(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *UserRepositoryTestSuite) TestCreateUserIntegration() {
+func (suite *UserRepositoryTestSuite) TestInsert() {
 	testCases := []struct {
 		User        userland.User
 		ExpectError bool
@@ -83,7 +83,7 @@ func (suite *UserRepositoryTestSuite) TestCreateUserIntegration() {
 	}
 }
 
-func (suite *UserRepositoryTestSuite) TestFindUserByEmailIntegration() {
+func (suite *UserRepositoryTestSuite) TestFindByEmail() {
 	suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
 		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now())`,
@@ -97,7 +97,7 @@ func (suite *UserRepositoryTestSuite) TestFindUserByEmailIntegration() {
 	suite.Equal(user.Email, email)
 }
 
-func (suite *UserRepositoryTestSuite) TestFindUserByIDIntegration() {
+func (suite *UserRepositoryTestSuite) TestFindByID() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -109,7 +109,7 @@ func (suite *UserRepositoryTestSuite) TestFindUserByIDIntegration() {
 	suite.Nil(err, "Failed to find user by id")
 }
 
-func (suite *UserRepositoryTestSuite) TestUpdateUserByIDIntegration() {
+func (suite *UserRepositoryTestSuite) TestUpdate() {
 	email := "adhitya.ramadhanus@icehousecorp.com"
 	suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -125,7 +125,7 @@ func (suite *UserRepositoryTestSuite) TestUpdateUserByIDIntegration() {
 	suite.Nil(err, "Failed to update user by id")
 }
 
-func (suite *UserRepositoryTestSuite) TestStoreBackupCodesByIDIntegration() {
+func (suite *UserRepositoryTestSuite) TestStoreBackupCodes() {
 	email := "adhitya.ramadhanus@icehousecorp.com"
 	suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -140,7 +140,7 @@ func (suite *UserRepositoryTestSuite) TestStoreBackupCodesByIDIntegration() {
 	suite.Nil(err, "Failed to store backupd codes user")
 }
 
-func (suite *UserRepositoryTestSuite) TestDeleteUserByIDIntegration() {
+func (suite *UserRepositoryTestSuite) TestDelete() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)

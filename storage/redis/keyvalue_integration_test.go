@@ -1,4 +1,4 @@
-// +build all repository
+// +build all keyvalue redis_repository
 
 package redis_test
 
@@ -50,34 +50,12 @@ func (suite *KeyValueServiceTestSuite) SetupSuite() {
 	suite.KeyValueService = keyValueService
 }
 
-func Setup(redisClient *_redis.Client) {
-	err := redisClient.FlushAll().Err()
-	if err != nil {
-		log.Fatal("Cannot setup redis")
-	}
-
-	err = redisClient.Set("example1", "value", 0).Err()
-	if err != nil {
-		log.Fatal("Cannot setup redis")
-	}
-
-	err = redisClient.Set("example2", "value", 0).Err()
-	if err != nil {
-		log.Fatal("Cannot setup redis")
-	}
-
-	err = redisClient.Set("example3", "value", 0).Err()
-	if err != nil {
-		log.Fatal("Cannot setup redis")
-	}
-}
-
 func TestKeyValueService(t *testing.T) {
 	suiteTest := new(KeyValueServiceTestSuite)
 	suite.Run(t, suiteTest)
 }
 
-func (suite *KeyValueServiceTestSuite) TestKeyValueGet() {
+func (suite *KeyValueServiceTestSuite) TestGet() {
 	suite.RedisClient.Set("example1", "value", 0)
 	suite.RedisClient.Set("example2", "value", 0)
 	suite.RedisClient.Set("example3", "value", 0)
@@ -119,7 +97,7 @@ func (suite *KeyValueServiceTestSuite) TestKeyValueGet() {
 	}
 }
 
-func (suite *KeyValueServiceTestSuite) TestKeyValueSet() {
+func (suite *KeyValueServiceTestSuite) TestSet() {
 	testCases := []struct {
 		Key   string
 		Value string
@@ -140,7 +118,7 @@ func (suite *KeyValueServiceTestSuite) TestKeyValueSet() {
 	}
 }
 
-func (suite *KeyValueServiceTestSuite) TestKeyValueSetEx() {
+func (suite *KeyValueServiceTestSuite) TestSetEx() {
 	testCases := []struct {
 		Key        string
 		Value      string
@@ -162,8 +140,27 @@ func (suite *KeyValueServiceTestSuite) TestKeyValueSetEx() {
 		suite.Equal(string(val), testCase.Value, "should get key")
 
 		// wait for duration + 1
-		time.Sleep(testCase.Expiration + 2)
+		time.Sleep(testCase.Expiration + time.Second)
 		_, err = suite.KeyValueService.Get(testCase.Key)
 		suite.NotNil(err, "should not get key")
+	}
+}
+func (suite *KeyValueServiceTestSuite) TestDelete() {
+	suite.RedisClient.Set("example1", "value", 0)
+
+	testCases := []struct {
+		Key string
+	}{
+		{
+			Key: "example1",
+		},
+		{
+			Key: "example2",
+		},
+	}
+
+	for _, testCase := range testCases {
+		err := suite.KeyValueService.Delete(testCase.Key)
+		suite.Nil(err, "should delete key")
 	}
 }

@@ -235,6 +235,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 			IP:         clientInfo["ip"].(string),
 			ClientID:   clientInfo["client_id"].(int),
 			ClientName: clientInfo["client_name"].(string),
+			Expiration: security.UserAccessTokenExpiration,
 		})
 	}
 
@@ -380,6 +381,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 		IP:         clientInfo["ip"].(string),
 		ClientID:   clientInfo["client_id"].(int),
 		ClientName: clientInfo["client_name"].(string),
+		Expiration: security.UserAccessTokenExpiration,
 	})
 
 	render.JSON(res, http.StatusOK, map[string]interface{}{
@@ -431,6 +433,7 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 		IP:         clientInfo["ip"].(string),
 		ClientID:   clientInfo["client_id"].(int),
 		ClientName: clientInfo["client_name"].(string),
+		Expiration: security.UserAccessTokenExpiration,
 	})
 
 	render.JSON(res, http.StatusOK, map[string]interface{}{

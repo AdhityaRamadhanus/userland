@@ -8,7 +8,6 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
-	"github.com/AdhityaRamadhanus/userland/common/security"
 
 	"github.com/go-redis/redis"
 )
@@ -27,7 +26,7 @@ func NewSessionRepository(redisClient *redis.Client) *SessionRepository {
 
 //Get a cache in bytes from a key
 func (s SessionRepository) Create(userID int, session userland.Session) (err error) {
-	sessionTimestamp := time.Now().Unix() + int64(security.UserAccessTokenExpiration.Seconds())
+	sessionTimestamp := time.Now().Unix() + int64(session.Expiration.Seconds())
 	sessionMap := map[string]interface{}{
 		"session_id":  session.ID,
 		"ip":          session.IP,

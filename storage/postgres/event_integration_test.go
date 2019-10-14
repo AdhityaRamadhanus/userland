@@ -1,4 +1,4 @@
-// +build all repository
+// +build all event postgres_repository
 
 package postgres_test
 

@@ -37,10 +37,15 @@ endif
 unit-test:
 	go test -count=1 -v --cover ./... -tags="unit"
 
-integration-test:
+service-integration-test:
 	@go test ./... -count=1 -v --cover -tags="authentication" | { grep -v 'no test files'; true; }
 	@go test ./... -count=1 -v --cover -tags="profile" | { grep -v 'no test files'; true; }
-	@go test ./... -count=1 -v --cover -tags="repository" | { grep -v 'no test files'; true; }
+
+repository-integration-test:
+	@go test ./... -count=1 -v --cover -tags="redis_repository" | { grep -v 'no test files'; true; }
+	@go test ./... -count=1 -v --cover -tags="postgres_repository" | { grep -v 'no test files'; true; }
+
+integration-test: service-integration-test repository-integration-test
 
 migration:
 	go run script/run_migration/main.go

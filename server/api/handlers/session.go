@@ -126,6 +126,7 @@ func (h SessionHandler) createNewAccessToken(res http.ResponseWriter, req *http.
 		IP:         clientInfo["ip"].(string),
 		ClientID:   clientInfo["client_id"].(int),
 		ClientName: clientInfo["client_name"].(string),
+		Expiration: security.UserAccessTokenExpiration,
 	})
 	// delete prev session
 	h.SessionService.EndSession(user.ID, prevSessionID)
