@@ -22,17 +22,30 @@ type Service interface {
 	CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error)
 }
 
-func NewService(keyValueService userland.KeyValueService, sessionRepository userland.SessionRepository) Service {
-	return &service{
-		keyValueService:   keyValueService,
-		sessionRepository: sessionRepository,
+func WithSessionRepository(sessionRepository userland.SessionRepository) func(service *service) {
+	return func(service *service) {
+		service.sessionRepository = sessionRepository
 	}
+}
+
+func WithKeyValueService(keyValueService userland.KeyValueService) func(service *service) {
+	return func(service *service) {
+		service.keyValueService = keyValueService
+	}
+}
+
+func NewService(options ...func(*service)) Service {
+	service := &service{}
+	for _, option := range options {
+		option(service)
+	}
+
+	return service
 }
 
 type service struct {
 	keyValueService   userland.KeyValueService
 	sessionRepository userland.SessionRepository
-	userRepository    userland.UserRepository
 }
 
 func (s service) CreateSession(userID int, session userland.Session) error {
