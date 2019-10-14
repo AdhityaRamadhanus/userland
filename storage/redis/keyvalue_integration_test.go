@@ -33,7 +33,7 @@ func (suite *KeyValueServiceTestSuite) SetupTest() {
 func (suite *KeyValueServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
-		redis.ConnectionBuilder,
+		redis.ConnectionBuilder("redis-connection", 0),
 		redis.KeyValueServiceBuilder,
 	)
 

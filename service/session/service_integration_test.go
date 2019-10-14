@@ -36,7 +36,7 @@ func (suite *SessionServiceTestSuite) SetupTest() {
 func (suite *SessionServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
-		redis.ConnectionBuilder,
+		redis.ConnectionBuilder("redis-connection", 0),
 		redis.KeyValueServiceBuilder,
 		redis.SessionRepositoryBuilder,
 		session.ServiceBuilder,

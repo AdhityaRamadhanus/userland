@@ -50,7 +50,7 @@ func (suite *AuthenticationServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		postgres.ConnectionBuilder,
-		redis.ConnectionBuilder,
+		redis.ConnectionBuilder("redis-connection", 0),
 		mailing.ClientBuilder,
 		redis.KeyValueServiceBuilder,
 		postgres.UserRepositoryBuilder,
