@@ -200,9 +200,9 @@ func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 
 	for _, testCase := range testCases {
 		// setup
-		for i := 0; i < len(testCase.SessionIDs); i++ {
+		for _, sessionID := range testCase.SessionIDs {
 			suite.SessionRepository.Create(testCase.UserID, userland.Session{
-				ID:         testCase.SessionIDs[i],
+				ID:         sessionID,
 				Token:      "test",
 				IP:         "123.123.13.123",
 				ClientID:   1,
