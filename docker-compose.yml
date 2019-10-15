@@ -1,5 +1,31 @@
 version: '3'
 services:
+  api:
+    build:
+      context: "."
+      dockerfile: "./deploy/api/Dockerfile"
+    ports:
+      - "8000:8000"
+    environment:
+      - "ENV=development"
+      - "POSTGRES_HOST=postgres"
+      - "REDIS_HOST=redis"
+    links:
+      - "postgres:postgres"
+      - "redis:redis"
+  mail:
+    build:
+      context: "."
+      dockerfile: "./deploy/mail/Dockerfile"
+    ports:
+      - "8001:8001"
+    environment:
+      - "ENV=development"
+      - "POSTGRES_HOST=postgres"
+      - "REDIS_HOST=redis"
+    links:
+      - "postgres:postgres"
+      - "redis:redis"
   postgres:
     container_name: userland-postgres
     image: postgres:latest
