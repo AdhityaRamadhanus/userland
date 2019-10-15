@@ -35,8 +35,8 @@ func NewServer(Handlers []Handler) *Server {
 	}
 }
 
-//CreateHttpServer will return http.Server for flexible use like testing
-func (s Server) CreateHttpServer() *http.Server {
+//CreateHTTPServer will return http.Server for flexible use like testing
+func (s Server) CreateHTTPServer() *http.Server {
 	middlewares := []alice.Constructor{
 		middlewares.PanicHandler,
 		gziphandler.GzipHandler,

@@ -97,7 +97,7 @@ func main() {
 	}
 
 	server := server.NewServer(handlers)
-	srv := server.CreateHttpServer()
+	srv := server.CreateHTTPServer()
 
 	// Handle SIGINT, SIGTERN, SIGHUP signal from OS
 	termChan := make(chan os.Signal, 1)
