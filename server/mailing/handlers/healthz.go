@@ -9,10 +9,11 @@ import (
 type HealthzHandler struct{}
 
 func (h HealthzHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/healthz", h.healthz).Methods("GET")
+	healthz := http.HandlerFunc(h.healthz)
+	router.HandleFunc("/healthz", healthz).Methods("GET")
 }
 
-func (h HealthzHandler) healthz(res http.ResponseWriter, req *http.Request) {
+func (h *HealthzHandler) healthz(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 	res.Write([]byte("OK"))
 }

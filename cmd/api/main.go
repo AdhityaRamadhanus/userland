@@ -64,8 +64,8 @@ func init() {
 func main() {
 	ctn := buildContainer()
 
-	authenticator := middlewares.NewAuthenticator(ctn.Get("keyvalue-service").(userland.KeyValueService))
-	ratelimiter := middlewares.NewRateLimiter(ctn.Get("redis-rate-limit-connection").(*_redis.Client))
+	authenticator := middlewares.TokenAuth(ctn.Get("keyvalue-service").(userland.KeyValueService))
+	ratelimiter := middlewares.RateLimit(ctn.Get("redis-rate-limit-connection").(*_redis.Client))
 
 	healthHandler := handlers.HealthzHandler{}
 	metricHandler := handlers.MetricHandler{}

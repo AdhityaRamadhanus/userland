@@ -8,8 +8,8 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
 )
 
-func Authorize(desiredTokenScope string) func(nextHandler http.HandlerFunc) http.HandlerFunc {
-	return func(nextHandler http.HandlerFunc) http.HandlerFunc {
+func Authorize(desiredTokenScope string) Middleware {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			accessToken := req.Context().Value(contextkey.AccessToken).(map[string]interface{})
 
@@ -24,7 +24,7 @@ func Authorize(desiredTokenScope string) func(nextHandler http.HandlerFunc) http
 				return
 			}
 
-			nextHandler(res, req)
+			next.ServeHTTP(res, req)
 		})
 	}
 }

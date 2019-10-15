@@ -24,7 +24,7 @@ func getClientIP(req *http.Request) string {
 }
 
 //LogRequest with info level every http request, unless production
-func ParseClientInfo(nextHandler http.Handler) http.Handler {
+func ParseClientInfo(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		clientInfoMap := map[string]interface{}{
 			"client_id":   -1,
@@ -42,6 +42,6 @@ func ParseClientInfo(nextHandler http.Handler) http.Handler {
 
 		// get IP address
 		req = req.WithContext(context.WithValue(req.Context(), contextkey.ClientInfo, map[string]interface{}(clientInfoMap)))
-		nextHandler.ServeHTTP(res, req)
+		next.ServeHTTP(res, req)
 	})
 }

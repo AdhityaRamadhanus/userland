@@ -25,27 +25,16 @@ func (c *redisRateLimitClient) RateScriptLoad(script string) (string, error) {
 	return c.ScriptLoad(script).Result()
 }
 
-type RateLimiter struct {
-	redisRateLimitClient *redisRateLimitClient
-	limiter              *ratelimiter.Limiter
-}
-
-func NewRateLimiter(redisClient *redis.Client) *RateLimiter {
-	return &RateLimiter{
-		redisRateLimitClient: &redisRateLimitClient{redisClient},
-	}
-}
-
-func (r *RateLimiter) Limit(maxFreq int, duration time.Duration) func(nextHandler http.HandlerFunc) http.HandlerFunc {
-	r.limiter = ratelimiter.New(ratelimiter.Options{
-		Max:      maxFreq,
-		Duration: duration, // limit to 1000 requests in 1 minute.
-		Client:   r.redisRateLimitClient,
-	})
-	return func(nextHandler http.HandlerFunc) http.HandlerFunc {
+func RateLimit(redisClient *redis.Client) MiddlewareWithArgs {
+	return func(next http.Handler, args ...interface{}) http.Handler {
+		limiter := ratelimiter.New(ratelimiter.Options{
+			Max:      args[0].(int),
+			Duration: args[1].(time.Duration), // limit to 1000 requests in 1 minute.
+			Client:   &redisRateLimitClient{redisClient},
+		})
 		return (http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
-			ctx, err := r.limiter.Get(fmt.Sprintf("%s:%s", req.URL.Path, clientInfo["ip"].(string)))
+			ctx, err := limiter.Get(fmt.Sprintf("%s:%s", req.URL.Path, clientInfo["ip"].(string)))
 			if err != nil {
 				http.Error(res, err.Error(), 500)
 				return
@@ -64,7 +53,7 @@ func (r *RateLimiter) Limit(maxFreq int, duration time.Duration) func(nextHandle
 				return
 			}
 
-			nextHandler(res, req)
+			next.ServeHTTP(res, req)
 		}))
 	}
 }

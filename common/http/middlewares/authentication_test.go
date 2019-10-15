@@ -51,8 +51,8 @@ func TestAuthentication(t *testing.T) {
 
 	for _, testCase := range testCases {
 
-		authenticator := middlewares.NewAuthenticator(&keyValueService)
-		ts := httptest.NewServer(authenticator.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authenticator := middlewares.TokenAuth(&keyValueService)
+		ts := httptest.NewServer(authenticator(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
 		})))

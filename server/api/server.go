@@ -44,11 +44,12 @@ func (s Server) CreateHTTPServer() *http.Server {
 		middlewares.TraceRequest,
 		middlewares.ParseClientInfo,
 		cors.Default().Handler,
-		middlewares.LogMetricRequest(
+		alice.Constructor(middlewares.LogMetricRequest(
 			metrics.PrometheusRequestCounter("api", "server", middlewares.LogMetricKeys),
 			metrics.PrometheusRequestLatency("api", "server", middlewares.LogMetricKeys),
-		),
+		)),
 	}
+
 	srv := &http.Server{
 		Handler:      alice.New(middlewares...).Then(s.Router),
 		Addr:         ":" + os.Getenv("USERLAND_PORT"),

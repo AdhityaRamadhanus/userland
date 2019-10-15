@@ -26,8 +26,8 @@ import (
 )
 
 type AuthenticationHandler struct {
-	Authenticator         *middlewares.Authenticator
-	RateLimiter           *middlewares.RateLimiter
+	Authenticator         middlewares.Middleware
+	RateLimiter           middlewares.MiddlewareWithArgs
 	AuthenticationService authentication.Service
 	SessionService        session.Service
 	ProfileService        profile.Service
@@ -35,22 +35,32 @@ type AuthenticationHandler struct {
 }
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
-	authenticate := h.Authenticator.Authenticate
+	// middlewares
+	authenticate := h.Authenticator
 	tfaAuthorize := middlewares.Authorize(security.TFATokenScope)
-	ratelimit3PerMinute := h.RateLimiter.Limit(10, time.Minute)
+	ratelimit := h.RateLimiter
 
-	router.HandleFunc("/auth/register", h.registerUser).Methods("POST")
+	registerUser := http.HandlerFunc(h.registerUser)
+	requestVerification := ratelimit(http.HandlerFunc(h.requestVerification), 10, time.Minute)
+	verifyAccount := http.HandlerFunc(h.verifyAccount)
+	login := http.HandlerFunc(h.login)
+	forgotPassword := ratelimit(http.HandlerFunc(h.forgotPassword), 10, time.Minute)
+	resetPassword := http.HandlerFunc(h.resetPassword)
+	verifyTFA := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFA)))
+	verifyTFABypass := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFABypass)))
 
-	router.HandleFunc("/auth/verification", ratelimit3PerMinute(h.requestVerification)).Methods("POST")
-	router.HandleFunc("/auth/verification", h.verifyAccount).Methods("PATCH")
+	router.Handle("/auth/register", registerUser).Methods("POST")
 
-	router.HandleFunc("/auth/login", h.login).Methods("POST")
+	router.Handle("/auth/verification", requestVerification).Methods("POST")
+	router.Handle("/auth/verification", verifyAccount).Methods("PATCH")
 
-	router.HandleFunc("/auth/password/forgot", ratelimit3PerMinute(h.forgotPassword)).Methods("POST")
-	router.HandleFunc("/auth/password/reset", h.resetPassword).Methods("POST")
+	router.Handle("/auth/login", login).Methods("POST")
 
-	router.HandleFunc("/auth/tfa/verify", authenticate(tfaAuthorize(h.verifyTFA))).Methods("POST")
-	router.HandleFunc("/auth/tfa/bypass", authenticate(tfaAuthorize(h.verifyTFABypass))).Methods("POST")
+	router.Handle("/auth/password/forgot", forgotPassword).Methods("POST")
+	router.Handle("/auth/password/reset", resetPassword).Methods("POST")
+
+	router.Handle("/auth/tfa/verify", verifyTFA).Methods("POST")
+	router.Handle("/auth/tfa/bypass", verifyTFABypass).Methods("POST")
 }
 
 func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.Request) {

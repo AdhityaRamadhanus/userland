@@ -41,10 +41,10 @@ func (s Server) CreateHTTPServer() *http.Server {
 		middlewares.PanicHandler,
 		gziphandler.GzipHandler,
 		middlewares.TraceRequest,
-		middlewares.LogMetricRequest(
+		alice.Constructor(middlewares.LogMetricRequest(
 			metrics.PrometheusRequestCounter("mailing", "server", middlewares.LogMetricKeys),
 			metrics.PrometheusRequestLatency("mailing", "server", middlewares.LogMetricKeys),
-		),
+		)),
 	}
 	srv := &http.Server{
 		Handler:      alice.New(middlewares...).Then(s.Router),

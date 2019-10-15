@@ -32,36 +32,51 @@ import (
 )
 
 type ProfileHandler struct {
-	Authenticator  *middlewares.Authenticator
-	RateLimiter    *middlewares.RateLimiter
+	Authenticator  middlewares.Middleware
+	RateLimiter    middlewares.MiddlewareWithArgs
 	ProfileService profile.Service
 	EventService   event.Service
 }
 
 func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
-	authenticate := h.Authenticator.Authenticate
+	authenticate := h.Authenticator
 	userAuthorize := middlewares.Authorize(security.UserTokenScope)
-	ratelimit3PerMinute := h.RateLimiter.Limit(10, time.Minute)
+	ratelimit := h.RateLimiter
 
-	router.HandleFunc("/me", authenticate(userAuthorize(h.getProfile))).Methods("GET")
-	router.HandleFunc("/me", authenticate(userAuthorize(h.updateProfile))).Methods("POST")
+	getProfile := authenticate(userAuthorize(http.HandlerFunc(h.getProfile)))
+	updateProfile := authenticate(userAuthorize(http.HandlerFunc(h.updateProfile)))
+	setPicture := authenticate(userAuthorize(http.HandlerFunc(h.setPicture)))
+	deletePicture := authenticate(userAuthorize(http.HandlerFunc(h.deletePicture)))
+	getEmail := authenticate(userAuthorize(http.HandlerFunc(h.getEmail)))
+	requestChangeEmail := ratelimit(authenticate(userAuthorize(http.HandlerFunc(h.requestChangeEmail))), 10, time.Minute)
+	changeEmail := authenticate(userAuthorize(http.HandlerFunc(h.changeEmail)))
+	changePassword := ratelimit(authenticate(userAuthorize(http.HandlerFunc(h.changePassword))), 10, time.Minute)
+	getTFAStatus := authenticate(userAuthorize(http.HandlerFunc(h.getTFAStatus)))
+	enrollTFA := authenticate(userAuthorize(http.HandlerFunc(h.enrollTFA)))
+	activateTFA := authenticate(userAuthorize(http.HandlerFunc(h.activateTFA)))
+	removeTFA := authenticate(userAuthorize(http.HandlerFunc(h.removeTFA)))
+	deleteAccount := authenticate(userAuthorize(http.HandlerFunc(h.deleteAccount)))
+	getEvents := authenticate(userAuthorize(http.HandlerFunc(h.getEvents)))
 
-	router.HandleFunc("/me/picture", authenticate(userAuthorize(h.setPicture))).Methods("POST")
-	router.HandleFunc("/me/picture", authenticate(userAuthorize(h.deletePicture))).Methods("DELETE")
+	router.Handle("/me", getProfile).Methods("GET")
+	router.Handle("/me", updateProfile).Methods("POST")
 
-	router.HandleFunc("/me/email", authenticate(userAuthorize(h.getEmail))).Methods("GET")
-	router.HandleFunc("/me/email", ratelimit3PerMinute(authenticate(userAuthorize(h.requestChangeEmail)))).Methods("POST")
-	router.HandleFunc("/me/email", authenticate(userAuthorize(h.changeEmail))).Methods("PATCH")
+	router.Handle("/me/picture", setPicture).Methods("POST")
+	router.Handle("/me/picture", deletePicture).Methods("DELETE")
 
-	router.HandleFunc("/me/password", ratelimit3PerMinute(authenticate(userAuthorize(h.changePassword)))).Methods("POST")
+	router.Handle("/me/email", getEmail).Methods("GET")
+	router.Handle("/me/email", requestChangeEmail).Methods("POST")
+	router.Handle("/me/email", changeEmail).Methods("PATCH")
 
-	router.HandleFunc("/me/tfa", authenticate(userAuthorize(h.getTFAStatus))).Methods("GET")
-	router.HandleFunc("/me/tfa/enroll", authenticate(userAuthorize(h.enrollTFA))).Methods("GET")
-	router.HandleFunc("/me/tfa/enroll", authenticate(userAuthorize(h.activateTFA))).Methods("POST")
-	router.HandleFunc("/me/tfa/remove", authenticate(userAuthorize(h.removeTFA))).Methods("POST")
+	router.Handle("/me/password", changePassword).Methods("POST")
 
-	router.HandleFunc("/me/delete", authenticate(userAuthorize(h.deleteAccount))).Methods("POST")
-	router.HandleFunc("/me/events", authenticate(userAuthorize(h.getEvents))).Methods("GET")
+	router.Handle("/me/tfa", getTFAStatus).Methods("GET")
+	router.Handle("/me/tfa/enroll", enrollTFA).Methods("GET")
+	router.Handle("/me/tfa/enroll", activateTFA).Methods("POST")
+	router.Handle("/me/tfa/remove", removeTFA).Methods("POST")
+
+	router.Handle("/me/delete", deleteAccount).Methods("POST")
+	router.Handle("/me/events", getEvents).Methods("GET")
 }
 
 func (h ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {

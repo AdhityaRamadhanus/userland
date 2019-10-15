@@ -9,8 +9,8 @@ import (
 )
 
 //Authenticate request
-func BasicAuth(username, password string) func(nextHandler http.HandlerFunc) http.HandlerFunc {
-	return func(nextHandler http.HandlerFunc) http.HandlerFunc {
+func BasicAuth(username, password string) Middleware {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			authHeader, ok := req.Header["Authorization"]
 			if !ok || len(authHeader) == 0 { // invalid header
@@ -60,7 +60,7 @@ func BasicAuth(username, password string) func(nextHandler http.HandlerFunc) htt
 				return
 			}
 
-			nextHandler(res, req)
+			next.ServeHTTP(res, req)
 		})
 	}
 }

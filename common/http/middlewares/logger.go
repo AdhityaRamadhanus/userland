@@ -26,7 +26,7 @@ var (
 )
 
 //LogRequest with info level every http request, unless production
-func LogMetricRequest(counter metrics.Counter, latencyObserver metrics.Histogram) func(nextHandler http.Handler) http.Handler {
+func LogMetricRequest(counter metrics.Counter, latencyObserver metrics.Histogram) Middleware {
 	return func(nextHandler http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			start := time.Now()

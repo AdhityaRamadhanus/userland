@@ -8,5 +8,5 @@ import (
 type MetricHandler struct{}
 
 func (h MetricHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/metrics", promhttp.Handler().ServeHTTP).Methods("GET")
+	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 }
