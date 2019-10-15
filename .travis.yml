@@ -17,4 +17,5 @@ services:
 branches:
   only:
   - master
+  - travis-ci
 sudo: required
