@@ -5,7 +5,7 @@ go 1.12
 require (
 	cloud.google.com/go v0.38.0
 	github.com/AdhityaRamadhanus/chronicle v0.0.0-20181104100529-12c91852031a // indirect
-	github.com/AdhityaRamadhanus/godex v0.0.0-20190820083838-58f02e89e36d
+	github.com/AdhityaRamadhanus/godex v0.0.0-20190820083838-58f02e89e36d // indirect
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
@@ -15,7 +15,6 @@ require (
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/gocraft/work v0.5.1
 	github.com/gomodule/redigo v2.0.0+incompatible
-	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gorilla/mux v1.7.3
@@ -39,8 +38,8 @@ require (
 	github.com/spf13/viper v1.4.0 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/teambition/ratelimiter-go v1.0.1
-	github.com/ulule/limiter v2.2.2+incompatible
-	github.com/ulule/limiter/v3 v3.3.2
+	github.com/ulule/limiter v2.2.2+incompatible // indirect
+	github.com/ulule/limiter/v3 v3.3.2 // indirect
 	go.opencensus.io v0.22.1 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	google.golang.org/api v0.10.0 // indirect

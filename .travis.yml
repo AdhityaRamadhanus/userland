@@ -8,7 +8,6 @@ language: go
 go:
   - 1.12.9
 env:
-  - GO111MODULE="on"
   - ENV=testing
 services:
   - postgresql

@@ -5,7 +5,7 @@ VERSION ?= 1.0.0
 
 # target #
 
-default: unit-test build
+default: unit-test integration-test build-api build-mail
 
 build-api:
 	@echo "Setup userland"
