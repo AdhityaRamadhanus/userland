@@ -8,8 +8,9 @@ before_script:
   - migrate -source storage/postgres/migration -database postgres://localhost:5432/userland_test up 2
 language: go
 go:
-  - 1.11.x
+  - 1.12.9
 env:
+  - export GO111MODULE="on"
   - ENV=testing
 services:
   - postgresql

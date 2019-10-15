@@ -94,7 +94,7 @@ func main() {
 	}
 
 	server := server.NewServer(handlers)
-	srv := server.CreateHttpServer()
+	srv := server.CreateHTTPServer()
 
 	pool := work.NewWorkerPool(struct{}{}, uint(runtime.NumCPU()), os.Getenv("MAIL_WORKER_SPACE"), redisPool)
 	// Map the name of jobs to handler functions
