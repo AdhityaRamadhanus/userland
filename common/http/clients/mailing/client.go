@@ -4,6 +4,7 @@ import (
 	"bytes"
 	b64 "encoding/base64"
 	"encoding/json"
+
 	"github.com/go-errors/errors"
 
 	"fmt"
@@ -79,7 +80,6 @@ func (c client) SendOTPEmail(recipientAddress string, recipientName string, otpT
 func (c client) SendVerificationEmail(recipientAddress string, recipientName string, verificationLink string) error {
 	url := fmt.Sprintf("%s/api/mail/verification", c.baseURL)
 
-	fmt.Println(verificationLink)
 	requestBody := map[string]interface{}{
 		"recipient":         recipientAddress,
 		"recipient_name":    recipientName,

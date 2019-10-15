@@ -110,7 +110,7 @@ func (s service) RequestChangeEmail(user userland.User, newEmail string) (verifi
 	s.keyValueService.SetEx(emailVerificationKey, []byte(newEmail), security.EmailVerificationExpiration)
 
 	// call mail service here
-	if err := s.mailingClient.SendVerificationEmail(user.Email, user.Fullname, verificationID); err != nil {
+	if err := s.mailingClient.SendVerificationEmail(newEmail, user.Fullname, verificationID); err != nil {
 		log.WithError(err).Error("Error sending email")
 	}
 	return verificationID, nil

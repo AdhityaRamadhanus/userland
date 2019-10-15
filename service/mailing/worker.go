@@ -7,6 +7,7 @@ import (
 
 	"github.com/gocraft/work"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"
+	log "github.com/sirupsen/logrus"
 )
 
 type Worker struct {
@@ -61,5 +62,11 @@ func (w Worker) EnquiryJob(job *work.Job) error {
 	}
 	messages := mailjet.MessagesV31{Info: messagesInfo}
 	_, err := w.mailjetClient.SendMailV31(&messages)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"service": "mail",
+			"type":    "worker",
+		}).WithError(err).Error("Error Mail Worker")
+	}
 	return err
 }
