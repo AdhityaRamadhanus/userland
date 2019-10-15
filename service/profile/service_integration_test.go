@@ -35,19 +35,17 @@ type ProfileServiceTestSuite struct {
 	ProfileService  profile.Service
 }
 
-func (suite *ProfileServiceTestSuite) SetupTest() {
-	_, err := suite.DB.Query("DELETE FROM users")
-	if err != nil {
+func (suite ProfileServiceTestSuite) SetupTest() {
+	if _, err := suite.DB.Query("DELETE FROM users"); err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
 
-	err = suite.RedisClient.FlushAll().Err()
-	if err != nil {
+	if err := suite.RedisClient.FlushAll().Err(); err != nil {
 		log.Fatal("Cannot setup redis")
 	}
 }
 
-func (suite *ProfileServiceTestSuite) BuildContainer() di.Container {
+func (suite ProfileServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		postgres.ConnectionBuilder,
@@ -82,7 +80,7 @@ func TestProfileService(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *ProfileServiceTestSuite) TestProfileIntegration() {
+func (suite ProfileServiceTestSuite) TestProfile() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -115,7 +113,7 @@ func (suite *ProfileServiceTestSuite) TestProfileIntegration() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestSetProfileIntegration() {
+func (suite ProfileServiceTestSuite) TestSetProfile() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -156,7 +154,7 @@ func (suite *ProfileServiceTestSuite) TestSetProfileIntegration() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
+func (suite ProfileServiceTestSuite) TestRequestChangeEmail() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -199,7 +197,7 @@ func (suite *ProfileServiceTestSuite) TestRequestChangeEmailIntegration() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
+func (suite ProfileServiceTestSuite) TestChangeEmail() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -226,7 +224,7 @@ func (suite *ProfileServiceTestSuite) TestChangeEmailIntegration() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestChangePasswordIntegration() {
+func (suite ProfileServiceTestSuite) TestChangePassword() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -266,7 +264,7 @@ func (suite *ProfileServiceTestSuite) TestChangePasswordIntegration() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestEnrollTFA() {
+func (suite ProfileServiceTestSuite) TestEnrollTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -296,7 +294,7 @@ func (suite *ProfileServiceTestSuite) TestEnrollTFA() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestActivateTFA() {
+func (suite ProfileServiceTestSuite) TestActivateTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -331,7 +329,7 @@ func (suite *ProfileServiceTestSuite) TestActivateTFA() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestRemoveTFA() {
+func (suite ProfileServiceTestSuite) TestRemoveTFA() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)
@@ -363,7 +361,7 @@ func (suite *ProfileServiceTestSuite) TestRemoveTFA() {
 	}
 }
 
-func (suite *ProfileServiceTestSuite) TestDeleteAccount() {
+func (suite ProfileServiceTestSuite) TestDeleteAccount() {
 	var lastUserID int
 	row := suite.DB.QueryRow(
 		`INSERT INTO users (fullname, email, password, created_at, updated_at)

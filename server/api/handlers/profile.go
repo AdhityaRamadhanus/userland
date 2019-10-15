@@ -64,7 +64,7 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/me/events", authenticate(userAuthorize(h.getEvents))).Methods("GET")
 }
 
-func (h *ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -75,7 +75,7 @@ func (h *ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) 
 	render.JSON(res, http.StatusOK, serializers.SerializeUserToJSON(user))
 }
 
-func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -132,7 +132,7 @@ func (h *ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Reques
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) getEmail(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) getEmail(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -143,7 +143,7 @@ func (h *ProfileHandler) getEmail(res http.ResponseWriter, req *http.Request) {
 	render.JSON(res, http.StatusOK, map[string]interface{}{"email": user.Email})
 }
 
-func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Request) {
 	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
 
@@ -189,7 +189,7 @@ func (h *ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.R
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) {
 	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
 
@@ -235,7 +235,7 @@ func (h *ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) changePassword(res http.ResponseWriter, req *http.Request) {
 	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
 
@@ -290,7 +290,7 @@ func (h *ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reque
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -306,7 +306,7 @@ func (h *ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request
 	render.JSON(res, http.StatusOK, response)
 }
 
-func (h *ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 
 	user, err := h.ProfileService.Profile(userID)
@@ -327,7 +327,7 @@ func (h *ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) {
 	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
 
@@ -374,7 +374,7 @@ func (h *ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"backup_codes": backupCodes})
 }
 
-func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	clientInfo := req.Context().Value(contextkey.ClientInfo).(map[string]interface{})
 	userID := getUserIDFromContext(req)
 
@@ -420,7 +420,7 @@ func (h *ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -463,7 +463,7 @@ func (h *ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Reques
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) deletePicture(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) deletePicture(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -481,7 +481,7 @@ func (h *ProfileHandler) deletePicture(res http.ResponseWriter, req *http.Reques
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
@@ -538,7 +538,7 @@ func (h *ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) 
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
+func (h ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 
@@ -620,7 +620,7 @@ func serializeEvents(events []userland.Event) []map[string]interface{} {
 	return serializedEvents
 }
 
-func (h *ProfileHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
+func (h ProfileHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
 	ServiceErrorsHTTPMapping := map[error]struct {
 		HTTPCode int
 		ErrCode  string

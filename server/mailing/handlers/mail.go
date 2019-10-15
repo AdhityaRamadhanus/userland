@@ -27,7 +27,7 @@ func (h MailHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/mail/verification", basicAuth(h.sendEmailVerification)).Methods("POST")
 }
 
-func (h *MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
+func (h MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -72,7 +72,7 @@ func (h *MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h *MailHandler) sendEmailVerification(res http.ResponseWriter, req *http.Request) {
+func (h MailHandler) sendEmailVerification(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {

@@ -2,8 +2,8 @@ package mailing
 
 import (
 	"encoding/json"
-	"github.com/go-errors/errors"
 
+	"github.com/go-errors/errors"
 
 	"github.com/gocraft/work"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"
@@ -26,7 +26,7 @@ func NewWorker(mailjetClient *mailjet.Client) *Worker {
 	}
 }
 
-func (w *Worker) EnquiryJob(job *work.Job) error {
+func (w Worker) EnquiryJob(job *work.Job) error {
 	// build recipients
 	sendOption := SendEmailOption{}
 	jsonBytes, _ := json.Marshal(job.Args)

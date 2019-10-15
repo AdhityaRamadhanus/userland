@@ -2,7 +2,7 @@ package session
 
 import (
 	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/metrics"
+	"github.com/AdhityaRamadhanus/userland/common/metrics"
 	"github.com/sarulabs/di"
 )
 

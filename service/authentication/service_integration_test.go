@@ -34,19 +34,17 @@ type AuthenticationServiceTestSuite struct {
 	AuthenticationService authentication.Service
 }
 
-func (suite *AuthenticationServiceTestSuite) SetupTest() {
-	_, err := suite.DB.Exec("DELETE FROM users")
-	if err != nil {
+func (suite AuthenticationServiceTestSuite) SetupTest() {
+	if _, err := suite.DB.Exec("DELETE FROM users"); err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
 	}
 
-	err = suite.RedisClient.FlushAll().Err()
-	if err != nil {
+	if err := suite.RedisClient.FlushAll().Err(); err != nil {
 		log.Fatal("Cannot setup redis")
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) BuildContainer() di.Container {
+func (suite AuthenticationServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		postgres.ConnectionBuilder,
@@ -80,7 +78,7 @@ func TestAuthenticationService(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *AuthenticationServiceTestSuite) TestRegisterIntegration() {
+func (suite AuthenticationServiceTestSuite) TestRegisterIntegration() {
 	testCases := []struct {
 		User        userland.User
 		ExpectError bool
@@ -121,7 +119,7 @@ func (suite *AuthenticationServiceTestSuite) TestRegisterIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestRequestVerificationIntegration() {
+func (suite AuthenticationServiceTestSuite) TestRequestVerificationIntegration() {
 	// setup
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
@@ -149,7 +147,7 @@ func (suite *AuthenticationServiceTestSuite) TestRequestVerificationIntegration(
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestVerifyAccountIntegration() {
+func (suite AuthenticationServiceTestSuite) TestVerifyAccountIntegration() {
 	// setup
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
@@ -187,7 +185,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyAccountIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestLoginIntegration() {
+func (suite AuthenticationServiceTestSuite) TestLoginIntegration() {
 	// setup
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
@@ -243,7 +241,7 @@ func (suite *AuthenticationServiceTestSuite) TestLoginIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestVerifyTFAIntegration() {
+func (suite AuthenticationServiceTestSuite) TestVerifyTFAIntegration() {
 	// setup
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
@@ -287,7 +285,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyTFAIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestVerifyTFABypassIntegration() {
+func (suite AuthenticationServiceTestSuite) TestVerifyTFABypassIntegration() {
 	// setup
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
@@ -334,7 +332,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyTFABypassIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestForgotPasswordIntegration() {
+func (suite AuthenticationServiceTestSuite) TestForgotPasswordIntegration() {
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
 		Fullname: "Adhitya Ramadhanus",
@@ -365,7 +363,7 @@ func (suite *AuthenticationServiceTestSuite) TestForgotPasswordIntegration() {
 	}
 }
 
-func (suite *AuthenticationServiceTestSuite) TestResetPasswordIntegration() {
+func (suite AuthenticationServiceTestSuite) TestResetPasswordIntegration() {
 	suite.UserRepository.Insert(userland.User{
 		Email:    "adhitya.ramadhanus@icehousecorp.com",
 		Fullname: "Adhitya Ramadhanus",

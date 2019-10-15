@@ -27,13 +27,13 @@ type SessionServiceTestSuite struct {
 	SessionService    session.Service
 }
 
-func (suite *SessionServiceTestSuite) SetupTest() {
+func (suite SessionServiceTestSuite) SetupTest() {
 	if err := suite.RedisClient.FlushAll().Err(); err != nil {
 		log.Fatal("Cannot setup redis")
 	}
 }
 
-func (suite *SessionServiceTestSuite) BuildContainer() di.Container {
+func (suite SessionServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		redis.ConnectionBuilder("redis-connection", 0),
@@ -62,7 +62,7 @@ func TestSessionService(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *SessionServiceTestSuite) TestCreateSession() {
+func (suite SessionServiceTestSuite) TestCreateSession() {
 	testCases := []struct {
 		UserID  int
 		Session userland.Session
@@ -86,7 +86,7 @@ func (suite *SessionServiceTestSuite) TestCreateSession() {
 	}
 }
 
-func (suite *SessionServiceTestSuite) TestListSession() {
+func (suite SessionServiceTestSuite) TestListSession() {
 	testCases := []struct {
 		UserID int
 	}{
@@ -112,7 +112,7 @@ func (suite *SessionServiceTestSuite) TestListSession() {
 	}
 }
 
-func (suite *SessionServiceTestSuite) TestEndSession() {
+func (suite SessionServiceTestSuite) TestEndSession() {
 	testCases := []struct {
 		UserID int
 	}{
@@ -138,7 +138,7 @@ func (suite *SessionServiceTestSuite) TestEndSession() {
 	}
 }
 
-func (suite *SessionServiceTestSuite) TestOtherSessions() {
+func (suite SessionServiceTestSuite) TestOtherSessions() {
 	testCases := []struct {
 		UserID     int
 		SessionIDs []string
@@ -170,7 +170,7 @@ func (suite *SessionServiceTestSuite) TestOtherSessions() {
 	}
 }
 
-func (suite *SessionServiceTestSuite) TestCreateRefreshToken() {
+func (suite SessionServiceTestSuite) TestCreateRefreshToken() {
 	testCases := []struct {
 		User      userland.User
 		SessionID string
@@ -191,7 +191,7 @@ func (suite *SessionServiceTestSuite) TestCreateRefreshToken() {
 	}
 }
 
-func (suite *SessionServiceTestSuite) TestCreateNewAccessToken() {
+func (suite SessionServiceTestSuite) TestCreateNewAccessToken() {
 	testCases := []struct {
 		User userland.User
 	}{

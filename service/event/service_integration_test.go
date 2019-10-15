@@ -27,15 +27,14 @@ type EventServiceTestSuite struct {
 	EventService    event.Service
 }
 
-func (suite *EventServiceTestSuite) SetupTest() {
-	_, err := suite.DB.Exec("DELETE FROM events")
-	if err != nil {
+func (suite EventServiceTestSuite) SetupTest() {
+	if _, err := suite.DB.Exec("DELETE FROM events"); err != nil {
 		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from events"))
 	}
 
 }
 
-func (suite *EventServiceTestSuite) BuildContainer() di.Container {
+func (suite EventServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		postgres.ConnectionBuilder,
@@ -64,7 +63,7 @@ func TestEventService(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *EventServiceTestSuite) TestLog() {
+func (suite EventServiceTestSuite) TestLog() {
 	testCases := []struct {
 		EventName string
 		UserID    int

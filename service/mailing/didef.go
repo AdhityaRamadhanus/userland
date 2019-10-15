@@ -1,7 +1,7 @@
 package mailing
 
 import (
-	"github.com/AdhityaRamadhanus/userland/metrics"
+	"github.com/AdhityaRamadhanus/userland/common/metrics"
 	"github.com/gocraft/work"
 	"github.com/sarulabs/di"
 

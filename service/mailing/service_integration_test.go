@@ -25,7 +25,7 @@ type MailingServiceTestSuite struct {
 	MailingService mailing.Service
 }
 
-func (suite *MailingServiceTestSuite) BuildContainer() di.Container {
+func (suite MailingServiceTestSuite) BuildContainer() di.Container {
 	builder, _ := di.NewBuilder()
 	builder.Add(
 		di.Def{
@@ -80,7 +80,7 @@ func TestMailingService(t *testing.T) {
 	suite.Run(t, suiteTest)
 }
 
-func (suite *MailingServiceTestSuite) TestSendOTPEmail() {
+func (suite MailingServiceTestSuite) TestSendOTPEmail() {
 	testCases := []struct {
 		Recipient mailing.MailAddress
 		OTP       string
@@ -102,7 +102,7 @@ func (suite *MailingServiceTestSuite) TestSendOTPEmail() {
 	}
 }
 
-func (suite *MailingServiceTestSuite) TestSendVerificationEmail() {
+func (suite MailingServiceTestSuite) TestSendVerificationEmail() {
 	testCases := []struct {
 		Recipient        mailing.MailAddress
 		VerificationLink string

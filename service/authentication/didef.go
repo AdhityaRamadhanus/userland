@@ -3,7 +3,7 @@ package authentication
 import (
 	"github.com/AdhityaRamadhanus/userland"
 	mailing "github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
-	"github.com/AdhityaRamadhanus/userland/metrics"
+	"github.com/AdhityaRamadhanus/userland/common/metrics"
 	"github.com/sarulabs/di"
 )
 
