@@ -2,6 +2,8 @@ before_script:
   - sleep 5
   - psql -c 'create database "userland_test";' -U postgres
   - curl -L https://github.com/golang-migrate/migrate/releases/download/v4.1.0/migrate.linux-amd64.tar.gz | tar xvz
+  - cp migrate.linux-amd64 $TRAVIS_BUILD_DIR
+  - cd $TRAVIS_BUILD_DIR
   - ./migrate.linux-amd64 -source storage/postgres/migration -database postgres://localhost:5432/userland_test up 2
 language: go
 go:
