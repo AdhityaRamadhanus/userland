@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/common/metrics"
 	"github.com/NYTimes/gziphandler"
-	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 )
 
@@ -38,28 +37,17 @@ func NewServer(Handlers []Handler) *Server {
 }
 
 //CreateHttpServer will return http.Server for flexible use like testing
-func (s *Server) CreateHttpServer() *http.Server {
-	counter := kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Namespace: "api",
-		Subsystem: "server",
-		Name:      "request_count",
-		Help:      "Number of requests received.",
-	}, middlewares.LogMetricKeys)
-
-	summary := kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
-		Namespace: "api",
-		Subsystem: "server",
-		Name:      "request_latency_microseconds",
-		Help:      "Total duration of requests in microseconds.",
-	}, middlewares.LogMetricKeys)
-
+func (s Server) CreateHttpServer() *http.Server {
 	middlewares := []alice.Constructor{
 		middlewares.PanicHandler,
 		gziphandler.GzipHandler,
 		middlewares.TraceRequest,
 		middlewares.ParseClientInfo,
 		cors.Default().Handler,
-		middlewares.LogMetricRequest(counter, summary),
+		middlewares.LogMetricRequest(
+			metrics.PrometheusRequestCounter("api", "server", middlewares.LogMetricKeys),
+			metrics.PrometheusRequestLatency("api", "server", middlewares.LogMetricKeys),
+		),
 	}
 	srv := &http.Server{
 		Handler:      alice.New(middlewares...).Then(s.Router),
