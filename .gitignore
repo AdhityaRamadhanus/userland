@@ -19,3 +19,4 @@ data/*
 configmap
 secret
 deploy/gcp/*
+/*.yaml
