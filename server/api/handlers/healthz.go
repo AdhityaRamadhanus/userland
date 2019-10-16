@@ -10,6 +10,7 @@ type HealthzHandler struct{}
 
 func (h HealthzHandler) RegisterRoutes(router *mux.Router) {
 	healthz := http.HandlerFunc(h.healthz)
+	router.HandleFunc("/", healthz).Methods("GET")
 	router.HandleFunc("/healthz", healthz).Methods("GET")
 }
 
