@@ -20,7 +20,7 @@ type Server struct {
 
 //NewServer create Server from Handler
 func NewServer(Handlers []Handler) *Server {
-	router := mux.NewRouter().StrictSlash(true).
+	router := mux.NewRouter().StrictSlash(true)
 
 	for _, handler := range Handlers {
 		handler.RegisterRoutes(router)
