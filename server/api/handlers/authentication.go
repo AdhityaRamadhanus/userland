@@ -35,6 +35,7 @@ type AuthenticationHandler struct {
 }
 
 func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
+	subRouter := router.PathPrefix("/api").Subrouter()
 	// middlewares
 	authenticate := h.Authenticator
 	tfaAuthorize := middlewares.Authorize(security.TFATokenScope)
@@ -49,18 +50,18 @@ func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	verifyTFA := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFA)))
 	verifyTFABypass := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFABypass)))
 
-	router.Handle("/auth/register", registerUser).Methods("POST")
+	subRouter.Handle("/auth/register", registerUser).Methods("POST")
 
-	router.Handle("/auth/verification", requestVerification).Methods("POST")
-	router.Handle("/auth/verification", verifyAccount).Methods("PATCH")
+	subRouter.Handle("/auth/verification", requestVerification).Methods("POST")
+	subRouter.Handle("/auth/verification", verifyAccount).Methods("PATCH")
 
-	router.Handle("/auth/login", login).Methods("POST")
+	subRouter.Handle("/auth/login", login).Methods("POST")
 
-	router.Handle("/auth/password/forgot", forgotPassword).Methods("POST")
-	router.Handle("/auth/password/reset", resetPassword).Methods("POST")
+	subRouter.Handle("/auth/password/forgot", forgotPassword).Methods("POST")
+	subRouter.Handle("/auth/password/reset", resetPassword).Methods("POST")
 
-	router.Handle("/auth/tfa/verify", verifyTFA).Methods("POST")
-	router.Handle("/auth/tfa/bypass", verifyTFABypass).Methods("POST")
+	subRouter.Handle("/auth/tfa/verify", verifyTFA).Methods("POST")
+	subRouter.Handle("/auth/tfa/bypass", verifyTFABypass).Methods("POST")
 }
 
 func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.Request) {

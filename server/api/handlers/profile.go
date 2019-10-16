@@ -39,6 +39,8 @@ type ProfileHandler struct {
 }
 
 func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
+	subRouter := router.PathPrefix("/api").Subrouter()
+
 	authenticate := h.Authenticator
 	userAuthorize := middlewares.Authorize(security.UserTokenScope)
 	ratelimit := h.RateLimiter
@@ -58,25 +60,25 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	deleteAccount := authenticate(userAuthorize(http.HandlerFunc(h.deleteAccount)))
 	getEvents := authenticate(userAuthorize(http.HandlerFunc(h.getEvents)))
 
-	router.Handle("/me", getProfile).Methods("GET")
-	router.Handle("/me", updateProfile).Methods("POST")
+	subRouter.Handle("/me", getProfile).Methods("GET")
+	subRouter.Handle("/me", updateProfile).Methods("POST")
 
-	router.Handle("/me/picture", setPicture).Methods("POST")
-	router.Handle("/me/picture", deletePicture).Methods("DELETE")
+	subRouter.Handle("/me/picture", setPicture).Methods("POST")
+	subRouter.Handle("/me/picture", deletePicture).Methods("DELETE")
 
-	router.Handle("/me/email", getEmail).Methods("GET")
-	router.Handle("/me/email", requestChangeEmail).Methods("POST")
-	router.Handle("/me/email", changeEmail).Methods("PATCH")
+	subRouter.Handle("/me/email", getEmail).Methods("GET")
+	subRouter.Handle("/me/email", requestChangeEmail).Methods("POST")
+	subRouter.Handle("/me/email", changeEmail).Methods("PATCH")
 
-	router.Handle("/me/password", changePassword).Methods("POST")
+	subRouter.Handle("/me/password", changePassword).Methods("POST")
 
-	router.Handle("/me/tfa", getTFAStatus).Methods("GET")
-	router.Handle("/me/tfa/enroll", enrollTFA).Methods("GET")
-	router.Handle("/me/tfa/enroll", activateTFA).Methods("POST")
-	router.Handle("/me/tfa/remove", removeTFA).Methods("POST")
+	subRouter.Handle("/me/tfa", getTFAStatus).Methods("GET")
+	subRouter.Handle("/me/tfa/enroll", enrollTFA).Methods("GET")
+	subRouter.Handle("/me/tfa/enroll", activateTFA).Methods("POST")
+	subRouter.Handle("/me/tfa/remove", removeTFA).Methods("POST")
 
-	router.Handle("/me/delete", deleteAccount).Methods("POST")
-	router.Handle("/me/events", getEvents).Methods("GET")
+	subRouter.Handle("/me/delete", deleteAccount).Methods("POST")
+	subRouter.Handle("/me/events", getEvents).Methods("GET")
 }
 
 func (h ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {

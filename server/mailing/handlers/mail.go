@@ -22,13 +22,15 @@ type MailHandler struct {
 }
 
 func (h MailHandler) RegisterRoutes(router *mux.Router) {
+	subRouter := router.PathPrefix("/api").Subrouter()
+
 	basicAuth := middlewares.BasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS"))
 
 	sendEmailOTP := basicAuth(http.HandlerFunc(h.sendEmailOTP))
 	sendEmailVerification := basicAuth(http.HandlerFunc(h.sendEmailVerification))
 
-	router.Handle("/mail/otp", sendEmailOTP).Methods("POST")
-	router.Handle("/mail/verification", sendEmailVerification).Methods("POST")
+	subRouter.Handle("/mail/otp", sendEmailOTP).Methods("POST")
+	subRouter.Handle("/mail/verification", sendEmailVerification).Methods("POST")
 }
 
 func (h MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {

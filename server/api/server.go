@@ -21,10 +21,7 @@ type Server struct {
 
 //NewServer create Server from Handler
 func NewServer(Handlers []Handler) *Server {
-	router := mux.NewRouter().
-		StrictSlash(true).
-		PathPrefix("/api").
-		Subrouter()
+	router := mux.NewRouter().StrictSlash(true)
 
 	for _, handler := range Handlers {
 		handler.RegisterRoutes(router)
