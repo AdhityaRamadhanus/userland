@@ -42,7 +42,7 @@ func (h MailingHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request)
 	}
 
 	sendEmailOTPRequest := struct {
-		OTP           string `json:"otp" valid:"required,stringlength(6|6)"`
+		OTP           string `json:"otp" valid:"required,stringlength(6|50)"`
 		Type          string `json:"type" valid:"required,stringlength(1|128)"`
 		Recipient     string `json:"recipient" valid:"required,email,stringlength(6|128)"`
 		RecipientName string `json:"recipient_name" valid:"required"`

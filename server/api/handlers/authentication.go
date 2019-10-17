@@ -478,6 +478,10 @@ func (h AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *
 			HTTPCode: http.StatusBadRequest,
 			ErrCode:  "ErrUserNotVerified",
 		},
+		authentication.ErrOTPInvalid: {
+			HTTPCode: http.StatusBadRequest,
+			ErrCode:  "ErrOTPInvalid",
+		},
 	}
 
 	errorMapping, isErrorMapped := ServiceErrorsHTTPMapping[err]
