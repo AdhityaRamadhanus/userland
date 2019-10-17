@@ -39,9 +39,10 @@ func LogMetricRequest(counter metrics.Counter, latencyObserver metrics.Histogram
 			nextHandler.ServeHTTP(lrw, req)
 
 			log.WithFields(log.Fields{
-				"status":    lrw.StatusCode,
-				"method":    req.Method,
-				"resp time": time.Since(start),
+				"request_id": req.Header.Get("X-Request-ID"),
+				"status":     lrw.StatusCode,
+				"method":     req.Method,
+				"resp time":  time.Since(start),
 			}).Info("PATH " + req.URL.Path)
 
 			statusStr := strconv.Itoa(lrw.StatusCode)
