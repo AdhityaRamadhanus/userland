@@ -23,14 +23,17 @@ var (
 		})
 	}
 
-	AuthenticationWithCustomScope = func(scope string) func(next http.Handler) http.Handler {
+	AuthenticationWithCustomClaims = func(customClaims map[string]interface{}) func(next http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 				claims := map[string]interface{}{
 					"userid":   float64(1),
 					"fullname": "unknown",
 					"email":    "test",
-					"scope":    scope,
+				}
+
+				for key, val := range customClaims {
+					claims[key] = val
 				}
 
 				req = req.WithContext(context.WithValue(req.Context(), contextkey.AccessToken, claims))
