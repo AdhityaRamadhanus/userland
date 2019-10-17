@@ -61,13 +61,13 @@ func TestAuthorization(t *testing.T) {
 				next.ServeHTTP(w, r)
 			})
 		}
-		authorize := middlewares.Authorize(testCase.DesiredScope)
+		authorize := middlewares.Authorize
 		defaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
 		})
 
-		ts := httptest.NewServer(contextSetter(authorize(defaultHandler)))
+		ts := httptest.NewServer(contextSetter(authorize(defaultHandler, testCase.DesiredScope)))
 		defer ts.Close()
 
 		res, err := http.Get(ts.URL)

@@ -12,7 +12,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/AdhityaRamadhanus/userland/mocks"
+	"github.com/AdhityaRamadhanus/userland/mocks/repository"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +45,7 @@ func TestAuthentication(t *testing.T) {
 		},
 	}
 
-	keyValueService := mocks.KeyValueService{}
+	keyValueService := repository.KeyValueService{}
 	keyValueService.On("Get", keygenerator.TokenKey(accessToken.Key)).Return([]byte(accessToken.Value), nil)
 	keyValueService.On("Get", keygenerator.TokenKey("test")).Return(nil, userland.ErrKeyNotFound)
 
