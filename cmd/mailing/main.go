@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	server "github.com/AdhityaRamadhanus/userland/server/mailing"
 	"github.com/AdhityaRamadhanus/userland/server/mailing/handlers"
 	"github.com/AdhityaRamadhanus/userland/service/mailing"
@@ -84,8 +85,11 @@ func main() {
 
 	redisPool := ctn.Get("redis-pool-connection").(*redis.Pool)
 	mailingWorker := ctn.Get("mailing-worker").(*mailing.Worker)
+
+	basicAuthenticator := middlewares.BasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS"))
 	healthHandler := handlers.HealthzHandler{}
-	mailingHandler := handlers.MailHandler{
+	mailingHandler := handlers.MailingHandler{
+		Authenticator:  basicAuthenticator,
 		MailingService: ctn.Get("mailing-service").(mailing.Service),
 	}
 	handlers := []server.Handler{

@@ -72,18 +72,21 @@ func main() {
 	authenticationHandler := handlers.AuthenticationHandler{
 		RateLimiter:           ratelimiter,
 		Authenticator:         authenticator,
+		Authorization:         middlewares.Authorize,
 		ProfileService:        ctn.Get("profile-service").(profile.Service),
 		AuthenticationService: ctn.Get("authentication-service").(authentication.Service),
 		SessionService:        ctn.Get("session-service").(session.Service),
 		EventService:          ctn.Get("event-service").(event.Service),
 	}
 	profileHandler := handlers.ProfileHandler{
+		Authorization:  middlewares.Authorize,
 		RateLimiter:    ratelimiter,
 		Authenticator:  authenticator,
 		ProfileService: ctn.Get("profile-service").(profile.Service),
 		EventService:   ctn.Get("event-service").(event.Service),
 	}
 	sessionHandler := handlers.SessionHandler{
+		Authorization:  middlewares.Authorize,
 		Authenticator:  authenticator,
 		ProfileService: ctn.Get("profile-service").(profile.Service),
 		SessionService: ctn.Get("session-service").(session.Service),
