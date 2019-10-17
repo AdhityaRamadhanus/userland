@@ -32,6 +32,7 @@ import (
 )
 
 type ProfileHandler struct {
+	Authorization  middlewares.MiddlewareWithArgs
 	Authenticator  middlewares.Middleware
 	RateLimiter    middlewares.MiddlewareWithArgs
 	ProfileService profile.Service
@@ -42,23 +43,23 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	subRouter := router.PathPrefix("/api").Subrouter()
 
 	authenticate := h.Authenticator
-	userAuthorize := middlewares.Authorize(security.UserTokenScope)
+	authorize := h.Authorization
 	ratelimit := h.RateLimiter
 
-	getProfile := authenticate(userAuthorize(http.HandlerFunc(h.getProfile)))
-	updateProfile := authenticate(userAuthorize(http.HandlerFunc(h.updateProfile)))
-	setPicture := authenticate(userAuthorize(http.HandlerFunc(h.setPicture)))
-	deletePicture := authenticate(userAuthorize(http.HandlerFunc(h.deletePicture)))
-	getEmail := authenticate(userAuthorize(http.HandlerFunc(h.getEmail)))
-	requestChangeEmail := ratelimit(authenticate(userAuthorize(http.HandlerFunc(h.requestChangeEmail))), 10, time.Minute)
-	changeEmail := authenticate(userAuthorize(http.HandlerFunc(h.changeEmail)))
-	changePassword := ratelimit(authenticate(userAuthorize(http.HandlerFunc(h.changePassword))), 10, time.Minute)
-	getTFAStatus := authenticate(userAuthorize(http.HandlerFunc(h.getTFAStatus)))
-	enrollTFA := authenticate(userAuthorize(http.HandlerFunc(h.enrollTFA)))
-	activateTFA := authenticate(userAuthorize(http.HandlerFunc(h.activateTFA)))
-	removeTFA := authenticate(userAuthorize(http.HandlerFunc(h.removeTFA)))
-	deleteAccount := authenticate(userAuthorize(http.HandlerFunc(h.deleteAccount)))
-	getEvents := authenticate(userAuthorize(http.HandlerFunc(h.getEvents)))
+	getProfile := authenticate(authorize(http.HandlerFunc(h.getProfile), security.UserTokenScope))
+	updateProfile := authenticate(authorize(http.HandlerFunc(h.updateProfile), security.UserTokenScope))
+	setPicture := authenticate(authorize(http.HandlerFunc(h.setPicture), security.UserTokenScope))
+	deletePicture := authenticate(authorize(http.HandlerFunc(h.deletePicture), security.UserTokenScope))
+	getEmail := authenticate(authorize(http.HandlerFunc(h.getEmail), security.UserTokenScope))
+	requestChangeEmail := ratelimit(authenticate(authorize(http.HandlerFunc(h.requestChangeEmail), security.UserTokenScope)), 10, time.Minute)
+	changeEmail := authenticate(authorize(http.HandlerFunc(h.changeEmail), security.UserTokenScope))
+	changePassword := ratelimit(authenticate(authorize(http.HandlerFunc(h.changePassword), security.UserTokenScope)), 10, time.Minute)
+	getTFAStatus := authenticate(authorize(http.HandlerFunc(h.getTFAStatus), security.UserTokenScope))
+	enrollTFA := authenticate(authorize(http.HandlerFunc(h.enrollTFA), security.UserTokenScope))
+	activateTFA := authenticate(authorize(http.HandlerFunc(h.activateTFA), security.UserTokenScope))
+	removeTFA := authenticate(authorize(http.HandlerFunc(h.removeTFA), security.UserTokenScope))
+	deleteAccount := authenticate(authorize(http.HandlerFunc(h.deleteAccount), security.UserTokenScope))
+	getEvents := authenticate(authorize(http.HandlerFunc(h.getEvents), security.UserTokenScope))
 
 	subRouter.Handle("/me", getProfile).Methods("GET")
 	subRouter.Handle("/me", updateProfile).Methods("POST")

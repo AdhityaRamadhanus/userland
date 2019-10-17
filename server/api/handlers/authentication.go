@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/server/api/serializers"
+	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/common/contextkey"
@@ -20,7 +21,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/service/profile"
 	"github.com/AdhityaRamadhanus/userland/service/session"
 	"github.com/asaskevich/govalidator"
-	"github.com/go-errors/errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,6 +28,7 @@ import (
 type AuthenticationHandler struct {
 	Authenticator         middlewares.Middleware
 	RateLimiter           middlewares.MiddlewareWithArgs
+	Authorization         middlewares.MiddlewareWithArgs
 	AuthenticationService authentication.Service
 	SessionService        session.Service
 	ProfileService        profile.Service
@@ -38,7 +39,7 @@ func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	subRouter := router.PathPrefix("/api").Subrouter()
 	// middlewares
 	authenticate := h.Authenticator
-	tfaAuthorize := middlewares.Authorize(security.TFATokenScope)
+	authorize := h.Authorization
 	ratelimit := h.RateLimiter
 
 	registerUser := http.HandlerFunc(h.registerUser)
@@ -47,8 +48,8 @@ func (h AuthenticationHandler) RegisterRoutes(router *mux.Router) {
 	login := http.HandlerFunc(h.login)
 	forgotPassword := ratelimit(http.HandlerFunc(h.forgotPassword), 10, time.Minute)
 	resetPassword := http.HandlerFunc(h.resetPassword)
-	verifyTFA := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFA)))
-	verifyTFABypass := authenticate(tfaAuthorize(http.HandlerFunc(h.verifyTFABypass)))
+	verifyTFA := authenticate(authorize(http.HandlerFunc(h.verifyTFA), security.TFATokenScope))
+	verifyTFABypass := authenticate(authorize(http.HandlerFunc(h.verifyTFABypass), security.TFATokenScope))
 
 	subRouter.Handle("/auth/register", registerUser).Methods("POST")
 

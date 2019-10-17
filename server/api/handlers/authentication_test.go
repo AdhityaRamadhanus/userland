@@ -3,15 +3,12 @@
 package handlers_test
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AdhityaRamadhanus/userland/common/security"
+	_http "github.com/AdhityaRamadhanus/userland/common/http"
 	"github.com/AdhityaRamadhanus/userland/mocks/middlewares"
 	"github.com/AdhityaRamadhanus/userland/mocks/service/authentication"
 	"github.com/AdhityaRamadhanus/userland/mocks/service/event"
@@ -22,30 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createHttpJSONRequest(method string, path string, requestBody interface{}) (*http.Request, error) {
-	var httpReq *http.Request
-	switch method {
-	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
-		jsonReqBody, err := json.Marshal(requestBody)
-		if err != nil {
-			return nil, errors.New("Failed to marshal request body")
-		}
-		httpReq, err = http.NewRequest(method, path, bytes.NewBuffer(jsonReqBody))
-		if err != nil {
-			return nil, errors.New("Failed to create request body")
-		}
-		httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
-	case http.MethodGet:
-		req, err := http.NewRequest(method, path, nil)
-		if err != nil {
-			return nil, errors.New("Failed to marshal get request body")
-		}
-		httpReq = req
-	}
-
-	return httpReq, nil
-}
-
 func TestAuthenticationHandler(t *testing.T) {
 	profileService := profile.SimpleProfileService{CalledMethods: map[string]bool{}}
 	sessionService := session.SimpleSessionService{CalledMethods: map[string]bool{}}
@@ -54,7 +27,8 @@ func TestAuthenticationHandler(t *testing.T) {
 
 	authenticationHandler := handlers.AuthenticationHandler{
 		RateLimiter:           middlewares.BypassWithArgs,
-		Authenticator:         middlewares.AuthenticationWithCustomScope(security.TFATokenScope),
+		Authorization:         middlewares.BypassWithArgs,
+		Authenticator:         middlewares.Authentication,
 		ProfileService:        profileService,
 		AuthenticationService: authenticationService,
 		SessionService:        sessionService,
@@ -161,12 +135,9 @@ func TestAuthenticationHandler(t *testing.T) {
 		testCase := testCase
 		t.Run(testCase.Name, func(t *testing.T) {
 			url := fmt.Sprintf("%s/%s", ts.URL, testCase.Path)
-			req, _ := createHttpJSONRequest(testCase.Method, url, testCase.RequestBody)
+			req, _ := _http.CreateJSONRequest(testCase.Method, url, testCase.RequestBody)
 			res, err := http.DefaultClient.Do(req)
 			assert.Nil(t, err)
-			var decodedResponse map[string]interface{}
-			json.NewDecoder(res.Body).Decode(&decodedResponse)
-			fmt.Println(decodedResponse)
 			assert.Equal(t, res.StatusCode, testCase.ExpectedStatus)
 		})
 	}

@@ -19,6 +19,7 @@ import (
 )
 
 type SessionHandler struct {
+	Authorization  middlewares.MiddlewareWithArgs
 	Authenticator  middlewares.Middleware
 	SessionService session.Service
 	ProfileService profile.Service
@@ -28,14 +29,13 @@ func (h SessionHandler) RegisterRoutes(router *mux.Router) {
 	subRouter := router.PathPrefix("/api").Subrouter()
 
 	authenticate := h.Authenticator
-	userAuthorize := middlewares.Authorize(security.UserTokenScope)
-	refreshAuthorize := middlewares.Authorize(security.RefreshTokenScope)
+	authorize := h.Authorization
 
-	listSession := authenticate(userAuthorize(http.HandlerFunc(h.listSession)))
-	endCurrentSession := authenticate(userAuthorize(http.HandlerFunc(h.endCurrentSession)))
-	endOtherSession := authenticate(userAuthorize(http.HandlerFunc(h.endOtherSession)))
-	createRefreshToken := authenticate(userAuthorize(http.HandlerFunc(h.createRefreshToken)))
-	createNewAccessToken := authenticate(refreshAuthorize(http.HandlerFunc(h.createNewAccessToken)))
+	listSession := authenticate(authorize(http.HandlerFunc(h.listSession), security.UserTokenScope))
+	endCurrentSession := authenticate(authorize(http.HandlerFunc(h.endCurrentSession), security.UserTokenScope))
+	endOtherSession := authenticate(authorize(http.HandlerFunc(h.endOtherSession), security.UserTokenScope))
+	createRefreshToken := authenticate(authorize(http.HandlerFunc(h.createRefreshToken), security.UserTokenScope))
+	createNewAccessToken := authenticate(authorize(http.HandlerFunc(h.createNewAccessToken), security.RefreshTokenScope))
 
 	subRouter.Handle("/me/session", listSession).Methods("GET")
 	subRouter.Handle("/me/session", endCurrentSession).Methods("DELETE")
