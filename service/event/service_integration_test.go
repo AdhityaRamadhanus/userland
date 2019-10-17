@@ -8,7 +8,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland/storage/postgres"
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
+
 	"github.com/sarulabs/di"
 
 	"github.com/joho/godotenv"
@@ -29,7 +29,7 @@ type EventServiceTestSuite struct {
 
 func (suite EventServiceTestSuite) SetupTest() {
 	if _, err := suite.DB.Exec("DELETE FROM events"); err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from events"))
+		log.Fatal("Failed to setup database ", err)
 	}
 
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/common/security"
-	"github.com/pkg/errors"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
@@ -36,7 +35,7 @@ type AuthenticationServiceTestSuite struct {
 
 func (suite AuthenticationServiceTestSuite) SetupTest() {
 	if _, err := suite.DB.Exec("DELETE FROM users"); err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
+		log.Fatal("Failed to setup database ", err)
 	}
 
 	if err := suite.RedisClient.FlushAll().Err(); err != nil {

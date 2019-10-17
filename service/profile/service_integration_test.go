@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
+
 	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
@@ -37,7 +37,7 @@ type ProfileServiceTestSuite struct {
 
 func (suite ProfileServiceTestSuite) SetupTest() {
 	if _, err := suite.DB.Query("DELETE FROM users"); err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from users"))
+		log.Fatal("Failed to setup database ", err)
 	}
 
 	if err := suite.RedisClient.FlushAll().Err(); err != nil {

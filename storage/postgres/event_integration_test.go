@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
+
 	"github.com/sarulabs/di"
 	"github.com/stretchr/testify/suite"
 
@@ -38,7 +38,7 @@ func (suite *EventRepositoryTestSuite) BuildContainer() di.Container {
 func (suite *EventRepositoryTestSuite) SetupTest() {
 	_, err := suite.DB.Query("DELETE FROM events")
 	if err != nil {
-		log.Fatal("Failed to setup database ", errors.Wrap(err, "Failed in delete from events"))
+		log.Fatal("Failed to setup database ", err)
 	}
 }
 

@@ -64,7 +64,13 @@ type service struct {
 	keyValueService userland.KeyValueService
 }
 
-func (s service) Register(user userland.User) error {
+func (s service) Register(user userland.User) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	user.Password = security.HashPassword(user.Password)
 	if err := s.userRepository.Insert(user); err != nil {
 		if err == userland.ErrDuplicateKey {
@@ -76,6 +82,12 @@ func (s service) Register(user userland.User) error {
 }
 
 func (s service) RequestVerification(verificationType string, email string) (verificationID string, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return "", err
@@ -103,7 +115,13 @@ func (s service) RequestVerification(verificationType string, email string) (ver
 	}
 }
 
-func (s service) VerifyAccount(verificationID string, email string, code string) error {
+func (s service) VerifyAccount(verificationID string, email string, code string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return err
@@ -125,6 +143,12 @@ func (s service) VerifyAccount(verificationID string, email string, code string)
 }
 
 func (s service) loginWithTFA(user userland.User) (accessToken security.AccessToken, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	code, err := security.GenerateOTP(6)
 	if err != nil {
 		return security.AccessToken{}, err
@@ -147,6 +171,12 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 }
 
 func (s service) loginNormal(user userland.User) (accessToken security.AccessToken, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
 		Expiration: security.UserAccessTokenExpiration,
 		Scope:      security.UserTokenScope,
@@ -158,6 +188,12 @@ func (s service) loginNormal(user userland.User) (accessToken security.AccessTok
 }
 
 func (s service) Login(email, password string) (requireTFA bool, accessToken security.AccessToken, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return false, security.AccessToken{}, err
@@ -182,6 +218,12 @@ func (s service) Login(email, password string) (requireTFA bool, accessToken sec
 }
 
 func (s service) VerifyTFA(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	// find user
 	user, err := s.userRepository.Find(userID)
 	if err != nil {
@@ -206,6 +248,12 @@ func (s service) VerifyTFA(tfaToken string, userID int, code string) (accessToke
 }
 
 func (s service) VerifyTFABypass(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	// find user
 	user, err := s.userRepository.Find(userID)
 	if err != nil {
@@ -237,6 +285,12 @@ func (s service) VerifyTFABypass(tfaToken string, userID int, code string) (acce
 }
 
 func (s service) ForgotPassword(email string) (verificationID string, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return "", err
@@ -252,7 +306,13 @@ func (s service) ForgotPassword(email string) (verificationID string, err error)
 	return verificationID, nil
 }
 
-func (s service) ResetPassword(forgotPassToken string, newPassword string) error {
+func (s service) ResetPassword(forgotPassToken string, newPassword string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	// verify token
 	forgotPassKey := keygenerator.ForgotPasswordKey(forgotPassToken)
 	email, err := s.keyValueService.Get(forgotPassKey)

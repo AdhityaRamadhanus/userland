@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/gocraft/work"
+	"github.com/go-errors/errors"
+
 )
 
 type MailAddress struct {
@@ -36,7 +38,13 @@ func NewService(enqueuer *work.Enqueuer) Service {
 	}
 }
 
-func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string) error {
+func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	queueName := os.Getenv("EMAIL_QUEUE")
 	opts := SendEmailOption{
 		From: MailAddress{
@@ -63,11 +71,17 @@ func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string)
 	jsonBytes, _ := json.Marshal(opts)
 	json.Unmarshal(jsonBytes, &work)
 
-	_, err := s.producer.Enqueue(queueName, work)
+	_, err = s.producer.Enqueue(queueName, work)
 	return err
 }
 
-func (s service) SendVerificationEmail(recipient MailAddress, verificationLink string) error {
+func (s service) SendVerificationEmail(recipient MailAddress, verificationLink string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	queueName := os.Getenv("EMAIL_QUEUE")
 	opts := SendEmailOption{
 		From: MailAddress{
@@ -93,6 +107,6 @@ func (s service) SendVerificationEmail(recipient MailAddress, verificationLink s
 	jsonBytes, _ := json.Marshal(opts)
 	json.Unmarshal(jsonBytes, &work)
 
-	_, err := s.producer.Enqueue(queueName, work)
+	_, err = s.producer.Enqueue(queueName, work)
 	return err
 }

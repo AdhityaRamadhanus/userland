@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
+	"github.com/go-errors/errors"
+
 )
 
 //Service provide an interface to story domain service
@@ -30,7 +32,13 @@ type service struct {
 	eventRepository userland.EventRepository
 }
 
-func (s service) Log(eventName string, userID int, clientInfo map[string]interface{}) error {
+func (s service) Log(eventName string, userID int, clientInfo map[string]interface{}) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	event := userland.Event{
 		UserAgent:  clientInfo["user_agent"].(string),
 		UserID:     userID,

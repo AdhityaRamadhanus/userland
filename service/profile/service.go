@@ -54,6 +54,10 @@ func WithObjectStorageService(objectStorageService userland.ObjectStorageService
 	}
 }
 
+func WrapErrorInTraceable(err error) error {
+	return errors.Wrap(err, 0)
+}
+
 //Service provide an interface to story domain service
 type Service interface {
 	ProfileByEmail(email string) (userland.User, error)
@@ -87,19 +91,42 @@ type service struct {
 	objectStorageService userland.ObjectStorageService
 }
 
-func (s service) ProfileByEmail(email string) (userland.User, error) {
+func (s service) ProfileByEmail(email string) (user userland.User, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
 	return s.userRepository.FindByEmail(email)
 }
 
-func (s service) Profile(userID int) (userland.User, error) {
+func (s service) Profile(userID int) (user userland.User, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	return s.userRepository.Find(userID)
 }
 
-func (s service) SetProfile(user userland.User) error {
+func (s service) SetProfile(user userland.User) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	return s.userRepository.Update(user)
 }
 
 func (s service) RequestChangeEmail(user userland.User, newEmail string) (verificationID string, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	_, err = s.userRepository.FindByEmail(newEmail)
 	if err == nil { // user present
 		return "", ErrEmailAlreadyUsed
@@ -116,11 +143,17 @@ func (s service) RequestChangeEmail(user userland.User, newEmail string) (verifi
 	return verificationID, nil
 }
 
-func (s service) ChangeEmail(user userland.User, verificationID string) error {
+func (s service) ChangeEmail(user userland.User, verificationID string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	verificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 	newEmail, err := s.keyValueService.Get(verificationKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	_, err = s.userRepository.FindByEmail(string(newEmail))
@@ -133,7 +166,13 @@ func (s service) ChangeEmail(user userland.User, verificationID string) error {
 	return s.userRepository.Update(user)
 }
 
-func (s service) ChangePassword(user userland.User, oldPassword string, newPassword string) error {
+func (s service) ChangePassword(user userland.User, oldPassword string, newPassword string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	if err := security.ComparePassword(user.Password, oldPassword); err != nil {
 		return ErrWrongPassword
 	}
@@ -143,6 +182,12 @@ func (s service) ChangePassword(user userland.User, oldPassword string, newPassw
 }
 
 func (s service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase64 string, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	if user.TFAEnabled {
 		return "", "", ErrTFAAlreadyEnabled
 	}
@@ -164,7 +209,13 @@ func (s service) EnrollTFA(user userland.User) (secret string, qrcodeImageBase64
 	return secret, qrcodeImageBase64, nil
 }
 
-func (s service) ActivateTFA(user userland.User, secret string, code string) ([]string, error) {
+func (s service) ActivateTFA(user userland.User, secret string, code string) (backupCodes []string, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	if user.TFAEnabled {
 		return nil, ErrTFAAlreadyEnabled
 	}
@@ -180,7 +231,7 @@ func (s service) ActivateTFA(user userland.User, secret string, code string) ([]
 	}
 
 	// create 5 backup codes
-	backupCodes := []string{}
+	backupCodes = []string{}
 	user.BackupCodes = []string{}
 	for i := 0; i < 5; i++ {
 		code, _ := security.GenerateOTP(6)
@@ -211,7 +262,13 @@ func (s service) RemoveTFA(user userland.User, currPassword string) error {
 	return s.userRepository.Update(user)
 }
 
-func (s service) DeleteAccount(user userland.User, currPassword string) error {
+func (s service) DeleteAccount(user userland.User, currPassword string) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	if err := security.ComparePassword(user.Password, currPassword); err != nil {
 		return ErrWrongPassword
 	}
@@ -225,11 +282,23 @@ func (s service) DeleteAccount(user userland.User, currPassword string) error {
 	return s.userRepository.Delete(user.ID)
 }
 
-func (s service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (userland.Events, int, error) {
+func (s service) ListEvents(user userland.User, pagingOptions userland.EventPagingOptions) (events userland.Events, count int, err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	return s.eventRepository.FindAllByUserID(user.ID, pagingOptions)
 }
 
-func (s service) SetProfilePicture(user userland.User, image io.Reader) error {
+func (s service) SetProfilePicture(user userland.User, image io.Reader) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.Wrap(err, 0)
+		}
+	}()
+
 	link, err := s.objectStorageService.Write(image, userland.ObjectMetaData{
 		CacheControl: "public, max-age=86400",
 		ContentType:  "image/jpeg",
