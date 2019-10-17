@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/AdhityaRamadhanus/userland/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/common/http/render"
@@ -17,23 +16,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type MailHandler struct {
+type MailingHandler struct {
+	Authenticator  middlewares.Middleware
 	MailingService mailing.Service
 }
 
-func (h MailHandler) RegisterRoutes(router *mux.Router) {
+func (h MailingHandler) RegisterRoutes(router *mux.Router) {
 	subRouter := router.PathPrefix("/api").Subrouter()
 
-	basicAuth := middlewares.BasicAuth(os.Getenv("MAIL_SERVICE_BASIC_USER"), os.Getenv("MAIL_SERVICE_BASIC_PASS"))
+	authenticate := h.Authenticator
 
-	sendEmailOTP := basicAuth(http.HandlerFunc(h.sendEmailOTP))
-	sendEmailVerification := basicAuth(http.HandlerFunc(h.sendEmailVerification))
+	sendEmailOTP := authenticate(http.HandlerFunc(h.sendEmailOTP))
+	sendEmailVerification := authenticate(http.HandlerFunc(h.sendEmailVerification))
 
 	subRouter.Handle("/mail/otp", sendEmailOTP).Methods("POST")
 	subRouter.Handle("/mail/verification", sendEmailVerification).Methods("POST")
 }
 
-func (h MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
+func (h MailingHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -78,7 +78,7 @@ func (h MailHandler) sendEmailOTP(res http.ResponseWriter, req *http.Request) {
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h MailHandler) sendEmailVerification(res http.ResponseWriter, req *http.Request) {
+func (h MailingHandler) sendEmailVerification(res http.ResponseWriter, req *http.Request) {
 	// Read Body, limit to 1 MB //
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -121,7 +121,7 @@ func (h MailHandler) sendEmailVerification(res http.ResponseWriter, req *http.Re
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
-func (h MailHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
+func (h MailingHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
 	log.WithFields(log.Fields{
 		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
 		"endpoint":     req.URL.Path,
