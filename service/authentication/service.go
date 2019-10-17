@@ -17,6 +17,7 @@ var (
 	ErrWrongPassword         = errors.New("Wrong password")
 	ErrServiceNotImplemented = errors.New("Service not implemented")
 	ErrWrongOTP              = errors.New("Wrong OTP")
+	ErrOTPInvalid            = errors.New("OTP Invalid")
 )
 
 //Service provide an interface to story domain service
@@ -167,6 +168,10 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 
 	tokenKey := keygenerator.TokenKey(accessToken.Key)
 	s.keyValueService.SetEx(tokenKey, []byte(accessToken.Value), security.TFATokenExpiration)
+
+	if err := s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "TFA Verification", code); err != nil {
+		log.WithError(err).Error("Error sending email")
+	}
 	return accessToken, nil
 }
 
@@ -317,7 +322,7 @@ func (s service) ResetPassword(forgotPassToken string, newPassword string) (err 
 	forgotPassKey := keygenerator.ForgotPasswordKey(forgotPassToken)
 	email, err := s.keyValueService.Get(forgotPassKey)
 	if err != nil {
-		return err
+		return ErrOTPInvalid
 	}
 
 	user, err := s.userRepository.FindByEmail(string(email))
