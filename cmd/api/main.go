@@ -54,7 +54,7 @@ func init() {
 	switch os.Getenv("ENV") {
 	case "production":
 		log.SetFormatter(&log.JSONFormatter{})
-		log.SetLevel(log.WarnLevel)
+		log.SetLevel(log.InfoLevel)
 	default:
 		log.SetLevel(log.DebugLevel)
 		log.SetOutput(os.Stdout)

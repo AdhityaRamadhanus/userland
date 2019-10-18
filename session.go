@@ -7,9 +7,11 @@ import (
 )
 
 var (
+	//ErrSessionNotFound represent session not found
 	ErrSessionNotFound = errors.New("Session not found")
 )
 
+//Session is domain entity
 type Session struct {
 	ID         string
 	Token      string
@@ -21,8 +23,10 @@ type Session struct {
 	UpdatedAt  time.Time
 }
 
+//Sessions a collection of Session
 type Sessions []Session
 
+//SessionRepository provide an interface to get user sessions
 type SessionRepository interface {
 	Create(userID int, session Session) error
 	FindAllByUserID(userID int) (Sessions, error)

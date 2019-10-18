@@ -8,10 +8,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/common/security"
 )
 
-var (
-	ErrSessionNotFound = errors.New("Session Not Found")
-)
-
 //Service provide an interface to story domain service
 type Service interface {
 	CreateSession(userID int, session userland.Session) error

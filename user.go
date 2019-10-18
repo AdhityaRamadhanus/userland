@@ -26,7 +26,9 @@ type User struct {
 }
 
 var (
+	//ErrUserNotFound represent user is not found when searching in repository
 	ErrUserNotFound = errors.New("User not found")
+	//ErrDuplicateKey represent insert duplicated user
 	ErrDuplicateKey = errors.New("Duplicate key in user")
 )
 

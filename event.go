@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+//Event is domain entity
 type Event struct {
 	ID         int
 	UserID     int
@@ -16,9 +17,10 @@ type Event struct {
 	CreatedAt  time.Time
 }
 
+//Events is collection of Event
 type Events []Event
 
-//PagingOptions is a struct used as pagination option to get entities
+//EventPagingOptions is a struct used as pagination option to get events
 type EventPagingOptions struct {
 	Limit  int
 	Offset int
@@ -26,7 +28,7 @@ type EventPagingOptions struct {
 	Order  string
 }
 
-//UserRepository provide an interface to get user entities
+//EventRepository provide an interface to get user events
 type EventRepository interface {
 	FindAllByUserID(userID int, pagingOptions EventPagingOptions) (Events, int, error)
 	Insert(event Event) error
