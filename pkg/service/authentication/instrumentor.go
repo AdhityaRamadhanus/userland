@@ -19,7 +19,7 @@ type instrumentorService struct {
 
 //Service provide an interface to story domain service
 
-func NewInstrumentorService(counter metrics.Counter, latency metrics.Histogram, s Service) Service {
+func NewInstrumentorService(latency metrics.Histogram, s Service) Service {
 	service := &instrumentorService{
 		requestLatency: latency,
 		next:           s,
