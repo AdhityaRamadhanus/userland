@@ -7,6 +7,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 )
 
 type UserScanStruct struct {
@@ -66,18 +67,17 @@ func (s UserRepository) Find(id int) (user userland.User, err error) {
 
 	stmt, err := s.db.Preparex(query)
 	if err != nil {
-		return userland.User{}, err
+		return userland.User{}, errors.Wrap(err, "db.Preparex(query) err")
 	}
 
 	if err := stmt.Get(&userScanStruct, id); err != nil {
 		if err == sql.ErrNoRows {
 			return userland.User{}, userland.ErrUserNotFound
 		}
-		return userland.User{}, err
+		return userland.User{}, errors.Wrap(err, "stmt.Get() err")
 	}
 
-	user = s.convertStructScanToEntity(userScanStruct)
-	return user, nil
+	return s.convertStructScanToEntity(userScanStruct), nil
 }
 
 //FindByEmail User by email
@@ -104,18 +104,17 @@ func (s UserRepository) FindByEmail(email string) (user userland.User, err error
 
 	stmt, err := s.db.Preparex(query)
 	if err != nil {
-		return userland.User{}, err
+		return userland.User{}, errors.Wrap(err, "db.Preparex(query) err")
 	}
 
 	if err := stmt.Get(&userScanStruct, email); err != nil {
 		if err == sql.ErrNoRows {
 			return userland.User{}, userland.ErrUserNotFound
 		}
-		return userland.User{}, err
+		return userland.User{}, errors.Wrap(err, "stmt.Get() err")
 	}
 
-	user = s.convertStructScanToEntity(userScanStruct)
-	return user, nil
+	return s.convertStructScanToEntity(userScanStruct), nil
 }
 
 //Delete delete story by id
@@ -124,12 +123,25 @@ func (s UserRepository) Delete(id int) error {
 
 	deleteStatement, err := s.db.Prepare(query)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "db.Preparex(query) err")
 	}
 
 	defer deleteStatement.Close()
-	_, err = deleteStatement.Exec(id)
-	return err
+	res, err := deleteStatement.Exec(id)
+	if err != nil {
+		return errors.Wrap(err, "deleteStatement.Exec() err")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "res.RowsAffected() err")
+	}
+
+	if rowsAffected == 0 {
+		return userland.ErrUserNotFound
+	}
+
+	return nil
 }
 
 //Insert insert story to datastore
@@ -160,17 +172,18 @@ func (s UserRepository) Insert(user userland.User) error {
 				now()
 			) RETURNING id`
 
-	nstmt, err := s.db.PrepareNamed(query)
+	stmt, err := s.db.PrepareNamed(query)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "db.PrepareNamed(query) err")
 	}
 
-	if _, err = nstmt.Query(user); err != nil {
+	if _, err = stmt.Query(user); err != nil {
 		if err.(*pq.Error).Code.Name() == "unique_violation" {
 			return userland.ErrDuplicateKey
 		}
-		return err
+		return errors.Wrap(err, "stmt.Query(user) err")
 	}
+
 	return nil
 }
 
@@ -204,14 +217,40 @@ func (s UserRepository) Update(user userland.User) error {
 				now()
 			) WHERE id=:id`
 
-	_, err := s.db.NamedQuery(query, user)
-	return err
+	res, err := s.db.NamedExec(query, user)
+	if err != nil {
+		return errors.Wrap(err, "db.NamedQuery() err")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "res.RowsAffected() err")
+	}
+
+	if rowsAffected == 0 {
+		return userland.ErrUserNotFound
+	}
+
+	return nil
 }
 
 func (s UserRepository) StoreBackupCodes(user userland.User) error {
 	query := `UPDATE users SET (backup_codes, updated_at) = ($2, now()) WHERE id=$1`
-	_, err := s.db.Query(query, user.ID, pq.Array(user.BackupCodes))
-	return err
+	res, err := s.db.Exec(query, user.ID, pq.Array(user.BackupCodes))
+	if err != nil {
+		return errors.Wrap(err, "db.Query() err")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "res.RowsAffected() err")
+	}
+
+	if rowsAffected == 0 {
+		return userland.ErrUserNotFound
+	}
+
+	return nil
 }
 
 func (u UserRepository) convertStructScanToEntity(userScanStruct UserScanStruct) userland.User {
