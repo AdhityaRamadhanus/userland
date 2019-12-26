@@ -8,6 +8,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/keygenerator"
+	"github.com/pkg/errors"
 
 	"github.com/go-redis/redis"
 )
@@ -24,7 +25,6 @@ func NewSessionRepository(redisClient *redis.Client) *SessionRepository {
 	}
 }
 
-//Get a cache in bytes from a key
 func (s SessionRepository) Create(userID int, session userland.Session) (err error) {
 	sessionTimestamp := time.Now().Unix() + int64(session.Expiration.Seconds())
 	sessionMap := map[string]interface{}{
@@ -38,18 +38,22 @@ func (s SessionRepository) Create(userID int, session userland.Session) (err err
 
 	sessionMapBytes, err := json.Marshal(sessionMap)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "json.Marshal() err")
 	}
 
 	sessionListKey := keygenerator.SessionListKey(userID)
-	return s.redisClient.ZAdd(sessionListKey, redis.Z{Score: float64(sessionTimestamp), Member: string(sessionMapBytes)}).Err()
+	if err := s.redisClient.ZAdd(sessionListKey, redis.Z{Score: float64(sessionTimestamp), Member: string(sessionMapBytes)}).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.ZAdd(%q, redisZ) err", sessionListKey)
+	}
+
+	return nil
 }
 
 func (s SessionRepository) FindAllByUserID(userID int) (userland.Sessions, error) {
 	sessionListKey := keygenerator.SessionListKey(userID)
 	sessionsStr, err := s.redisClient.ZRange(sessionListKey, math.MinInt64, math.MaxInt64).Result()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "redisClient.ZRange(%q) err", sessionListKey)
 	}
 
 	sessions := userland.Sessions{}
@@ -58,8 +62,14 @@ func (s SessionRepository) FindAllByUserID(userID int) (userland.Sessions, error
 		if err := json.Unmarshal([]byte(sessionStr), &sessionMap); err != nil {
 			continue
 		}
-		createdAt, _ := time.Parse(time.RFC3339, sessionMap["created_at"].(string))
-		updatedAt, _ := time.Parse(time.RFC3339, sessionMap["updated_at"].(string))
+		createdAt, err := time.Parse(time.RFC3339, sessionMap["created_at"].(string))
+		if err != nil {
+			continue
+		}
+		updatedAt, err := time.Parse(time.RFC3339, sessionMap["updated_at"].(string))
+		if err != nil {
+			continue
+		}
 		session := userland.Session{
 			ID:         sessionMap["session_id"].(string),
 			IP:         sessionMap["ip"].(string),
@@ -77,14 +87,18 @@ func (s SessionRepository) FindAllByUserID(userID int) (userland.Sessions, error
 func (s SessionRepository) DeleteExpiredSessions(userID int) (err error) {
 	sessionListKey := keygenerator.SessionListKey(userID)
 	nowEpochStr := strconv.FormatInt(time.Now().Unix(), 10)
-	return s.redisClient.ZRemRangeByScore(sessionListKey, "-inf", nowEpochStr).Err()
+	if err := s.redisClient.ZRemRangeByScore(sessionListKey, "-inf", nowEpochStr).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.ZRemRangeByScore(%q, -inf, %s) err", sessionListKey, nowEpochStr)
+	}
+
+	return nil
 }
 
 func (s SessionRepository) DeleteBySessionID(userID int, sessionID string) (err error) {
 	sessionListKey := keygenerator.SessionListKey(userID)
 	sessionsStr, err := s.redisClient.ZRange(sessionListKey, math.MinInt64, math.MaxInt64).Result()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "redisClient.ZRange(%q) err", sessionListKey)
 	}
 
 	var toBedeletedSession string
@@ -103,14 +117,18 @@ func (s SessionRepository) DeleteBySessionID(userID int, sessionID string) (err 
 		return userland.ErrSessionNotFound
 	}
 
-	return s.redisClient.ZRem(sessionListKey, toBedeletedSession).Err()
+	if err := s.redisClient.ZRem(sessionListKey, toBedeletedSession).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.ZRem(%q, %q) err", sessionListKey, toBedeletedSession)
+	}
+
+	return nil
 }
 
 func (s SessionRepository) DeleteOtherSessions(userID int, currentSessionID string) (deletedSessionIDs []string, err error) {
 	sessionListKey := keygenerator.SessionListKey(userID)
 	sessionsStr, err := s.redisClient.ZRange(sessionListKey, math.MinInt64, math.MaxInt64).Result()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "redisClient.ZRange(%q) err", sessionListKey)
 	}
 
 	deletedSessionIDs = []string{}

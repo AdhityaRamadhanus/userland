@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
-
 	"github.com/go-redis/redis"
+	"github.com/pkg/errors"
 )
 
 //KeyValueService implements userland.KeyValueService interface using redis
@@ -27,7 +27,7 @@ func (c KeyValueService) Get(key string) (result []byte, err error) {
 		if err == redis.Nil {
 			return nil, userland.ErrKeyNotFound
 		}
-		return nil, err
+		return nil, errors.Wrapf(err, "redisClient.Get(%q).Bytes() err", key)
 	}
 
 	return val, nil
@@ -35,15 +35,27 @@ func (c KeyValueService) Get(key string) (result []byte, err error) {
 
 //Set cache in bytes with key without expiration
 func (c KeyValueService) Set(key string, value []byte) (err error) {
-	return c.redisClient.Set(key, string(value), 0).Err()
+	if err := c.redisClient.Set(key, string(value), 0).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.Set(%q, <val>, 0) err", key)
+	}
+
+	return nil
 }
 
-//Set cache in bytes with key without expiration
+//Delete cache in bytes with key without expiration
 func (c KeyValueService) Delete(key string) (err error) {
-	return c.redisClient.Del(key).Err()
+	if err := c.redisClient.Del(key).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.Delete(%q) err", key)
+	}
+
+	return nil
 }
 
 //SetEx cache in bytes with key with expiration
 func (c KeyValueService) SetEx(key string, value []byte, expiration time.Duration) (err error) {
-	return c.redisClient.Set(key, value, expiration).Err()
+	if err := c.redisClient.Set(key, value, expiration).Err(); err != nil {
+		return errors.Wrapf(err, "redisClient.Set(%q, <val>, %d) err", key, expiration)
+	}
+
+	return nil
 }
