@@ -28,6 +28,7 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/common v0.4.0
 	github.com/pyros2097/go-embed v0.0.0-20160412061840-4274f3450521 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/cors v1.7.0

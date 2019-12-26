@@ -1,12 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/metrics"
+	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/NYTimes/gziphandler"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
@@ -15,12 +16,12 @@ import (
 
 //Server hold mux Router and information of host port and address of our app
 type Server struct {
-	Router *mux.Router
-	Port   string
+	Router  *mux.Router
+	Address string
 }
 
 //NewServer create Server from Handler
-func NewServer(Handlers []Handler) *Server {
+func NewServer(cfg config.ApiConfig, Handlers ...Handler) *Server {
 	router := mux.NewRouter().StrictSlash(true)
 
 	for _, handler := range Handlers {
@@ -28,8 +29,8 @@ func NewServer(Handlers []Handler) *Server {
 	}
 
 	return &Server{
-		Router: router,
-		Port:   os.Getenv("USERLAND_PORT"),
+		Router:  router,
+		Address: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 	}
 }
 
@@ -49,7 +50,7 @@ func (s Server) CreateHTTPServer() *http.Server {
 
 	srv := &http.Server{
 		Handler:      alice.New(middlewares...).Then(s.Router),
-		Addr:         ":" + os.Getenv("USERLAND_PORT"),
+		Addr:         s.Address,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}

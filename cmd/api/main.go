@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/AdhityaRamadhanus/userland"
+	"cloud.google.com/go/storage"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/middlewares"
+	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	server "github.com/AdhityaRamadhanus/userland/pkg/server/api"
 	"github.com/AdhityaRamadhanus/userland/pkg/server/api/handlers"
 	"github.com/AdhityaRamadhanus/userland/pkg/service/authentication"
@@ -17,55 +20,95 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/gcs"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/redis"
-	_redis "github.com/go-redis/redis"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/sarulabs/di"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
-func buildContainer() di.Container {
-	builder, _ := di.NewBuilder()
-	builder.Add(
-		postgres.ConnectionBuilder,
-		redis.ConnectionBuilder("redis-connection", 0),
-		redis.ConnectionBuilder("redis-rate-limit-connection", 2),
-		gcs.ServiceBuilder,
-		mailing.ClientBuilder,
-		redis.KeyValueServiceBuilder,
-		postgres.UserRepositoryBuilder,
-		postgres.EventRepositoryBuilder,
-		redis.SessionRepositoryBuilder,
-		authentication.ServiceBuilder,
-		authentication.ServiceInstrumentorBuilder,
-		session.ServiceBuilder,
-		session.ServiceInstrumentorBuilder,
-		profile.ServiceBuilder,
-		profile.ServiceInstrumentorBuilder,
-		event.ServiceBuilder,
-		event.ServiceInstrumentorBuilder,
-	)
+func buildConfig() *config.Configuration {
+	envPath := ".env"
+	if err := godotenv.Load(envPath); err != nil {
+		logrus.Fatalf("godotenv.Load(%q) err = %v", envPath, err)
+	}
 
-	return builder.Build()
+	yamlPath := "config.yaml"
+	envPrefix := ""
+	c, err := config.Build(yamlPath, envPrefix)
+	if err != nil {
+		logrus.Fatalf("config.Build(%q, %q) err = %v", yamlPath, envPrefix, err)
+	}
+
+	return c
 }
 
-func init() {
-	godotenv.Load()
-	switch os.Getenv("ENV") {
-	case "production":
-		log.SetFormatter(&log.JSONFormatter{})
-		log.SetLevel(log.InfoLevel)
-	default:
-		log.SetLevel(log.DebugLevel)
-		log.SetOutput(os.Stdout)
+func setupLogger(cfg config.LogConfig) {
+	switch cfg.Format {
+	case "json":
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	}
+
+	switch cfg.Level {
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
 	}
 }
 
 func main() {
-	ctn := buildContainer()
+	cfg := buildConfig()
+	setupLogger(cfg.Log)
 
-	authenticator := middlewares.TokenAuth(ctn.Get("keyvalue-service").(userland.KeyValueService))
-	ratelimiter := middlewares.RateLimit(ctn.Get("redis-rate-limit-connection").(*_redis.Client))
+	logrus.Debug("Connecting to postgres at", cfg.Postgres)
+	pgConn, err := postgres.CreateConnection(cfg.Postgres)
+	if err != nil {
+		logrus.Fatalf("postgres.CreateConnection() err = %v", err)
+	}
+	logrus.Debug("Connecting to redis at", cfg.Redis)
+	redisClient, err := redis.CreateClient(cfg.Redis, 0)
+	if err != nil {
+		logrus.Fatalf("redis.CreateClient(cfg, 0) err = %v", err)
+	}
+	redisRateClient, err := redis.CreateClient(cfg.Redis, 1)
+	if err != nil {
+		logrus.Fatalf("redis.CreateClient(cfg, 1) err = %v", err)
+	}
+	ctx := context.Background()
+	gcsClient, err := storage.NewClient(ctx)
+	if err != nil {
+		logrus.Fatalf("(GCS) storage.NewClient(ctx) err = %v", err)
+	}
+
+	// mailing Client
+	mailClient := mailing.NewMailingClient(cfg.Mail.Host, mailing.WithClientTimeout(5*time.Second), mailing.WithBasicAuth(cfg.Mail.AuthUser, cfg.Mail.AuthPassword))
+	// repositories
+	userRepository := postgres.NewUserRepository(pgConn)
+	eventRepository := postgres.NewEventRepository(pgConn)
+	sessionRepository := redis.NewSessionRepository(redisClient)
+	keyValueSvc := redis.NewKeyValueService(redisClient)
+	objectStorageSvc := gcs.NewObjectStorageService(gcsClient, cfg.GCP.BucketName)
+
+	// services
+	authSvc := authentication.NewService(
+		authentication.WithKeyValueService(keyValueSvc),
+		authentication.WithMailingClient(mailClient),
+		authentication.WithUserRepository(userRepository),
+	)
+	// authInstSvc := authentication.NewInstrumentorService(metrics.PrometheusRequestLatency("service", "authentication", authentication.MetricKeys), authSvc)
+
+	profileSvc := profile.NewService(
+		profile.WithEventRepository(eventRepository),
+		profile.WithKeyValueService(keyValueSvc),
+		profile.WithMailingClient(mailClient),
+		profile.WithObjectStorageService(objectStorageSvc),
+		profile.WithUserRepository(userRepository),
+	)
+
+	sessionSvc := session.NewService(session.WithKeyValueService(keyValueSvc), session.WithSessionRepository(sessionRepository))
+	eventSvc := event.NewService(event.WithEventRepository(eventRepository))
+
+	authenticator := middlewares.TokenAuth(keyValueSvc)
+	ratelimiter := middlewares.RateLimit(redisRateClient)
 
 	healthHandler := handlers.HealthzHandler{}
 	metricHandler := handlers.MetricHandler{}
@@ -73,33 +116,26 @@ func main() {
 		RateLimiter:           ratelimiter,
 		Authenticator:         authenticator,
 		Authorization:         middlewares.Authorize,
-		ProfileService:        ctn.Get("profile-service").(profile.Service),
-		AuthenticationService: ctn.Get("authentication-service").(authentication.Service),
-		SessionService:        ctn.Get("session-service").(session.Service),
-		EventService:          ctn.Get("event-service").(event.Service),
+		ProfileService:        profileSvc,
+		AuthenticationService: authSvc,
+		SessionService:        sessionSvc,
+		EventService:          eventSvc,
 	}
 	profileHandler := handlers.ProfileHandler{
 		Authorization:  middlewares.Authorize,
 		RateLimiter:    ratelimiter,
 		Authenticator:  authenticator,
-		ProfileService: ctn.Get("profile-service").(profile.Service),
-		EventService:   ctn.Get("event-service").(event.Service),
+		ProfileService: profileSvc,
+		EventService:   eventSvc,
 	}
 	sessionHandler := handlers.SessionHandler{
 		Authorization:  middlewares.Authorize,
 		Authenticator:  authenticator,
-		ProfileService: ctn.Get("profile-service").(profile.Service),
-		SessionService: ctn.Get("session-service").(session.Service),
-	}
-	handlers := []server.Handler{
-		metricHandler,
-		healthHandler,
-		authenticationHandler,
-		profileHandler,
-		sessionHandler,
+		ProfileService: profileSvc,
+		SessionService: sessionSvc,
 	}
 
-	server := server.NewServer(handlers)
+	server := server.NewServer(cfg.API, metricHandler, healthHandler, authenticationHandler, profileHandler, sessionHandler)
 	srv := server.CreateHTTPServer()
 
 	// Handle SIGINT, SIGTERN, SIGHUP signal from OS
@@ -107,10 +143,10 @@ func main() {
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		<-termChan
-		log.Warn("Receiving signal, Shutting down server")
+		logrus.Warn("Receiving signal, Shutting down server")
 		srv.Close()
 	}()
 
-	log.WithField("Port", server.Port).Info("Userland API Server is running")
-	log.Fatal(srv.ListenAndServe())
+	logrus.WithField("Address", server.Address).Info("Userland API Server is running")
+	logrus.Fatal(srv.ListenAndServe())
 }
