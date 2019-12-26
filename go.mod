@@ -21,6 +21,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
 	github.com/justinas/alice v0.0.0-20171023064455-03f45bd4b7da
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lib/pq v1.2.0
 	github.com/mailjet/mailjet-apiv3-go v0.0.0-20190724151621-55e56f74078c
 	github.com/onsi/ginkgo v1.10.1 // indirect
@@ -44,4 +45,5 @@ require (
 	go.opencensus.io v0.22.1 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	google.golang.org/api v0.10.0 // indirect
+	gopkg.in/yaml.v2 v2.2.2
 )
