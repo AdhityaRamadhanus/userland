@@ -7,16 +7,20 @@ import (
 	mailing "github.com/AdhityaRamadhanus/userland/pkg/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
+	EventLogin          = "user.authentication.login"
+	EventForgotPassword = "user.authentication.forgot_password"
+
 	ErrUserRegistered        = errors.New("User already registered")
 	ErrUserNotVerified       = errors.New("User not verified")
 	ErrWrongPassword         = errors.New("Wrong password")
 	ErrServiceNotImplemented = errors.New("Service not implemented")
 	ErrWrongOTP              = errors.New("Wrong OTP")
+	ErrWrongBackupCode = errors.New("code doesn't match any backup codes")
 	ErrOTPInvalid            = errors.New("OTP Invalid")
 )
 
@@ -66,12 +70,6 @@ type service struct {
 }
 
 func (s service) Register(user userland.User) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	user.Password = security.HashPassword(user.Password)
 	if err := s.userRepository.Insert(user); err != nil {
 		if err == userland.ErrDuplicateKey {
@@ -79,16 +77,11 @@ func (s service) Register(user userland.User) (err error) {
 		}
 		return err
 	}
+
 	return nil
 }
 
 func (s service) RequestVerification(verificationType string, email string) (verificationID string, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return "", err
@@ -106,6 +99,8 @@ func (s service) RequestVerification(verificationType string, email string) (ver
 		emailVerificationKey := keygenerator.EmailVerificationKey(user.ID, verificationID)
 		s.keyValueService.SetEx(emailVerificationKey, []byte(code), security.EmailVerificationExpiration)
 		// call mail service here
+		// TODO change verificationLink to use mail host via mailing client
+		// TODO see if wee need to return error isntead of just logging
 		verificationLink := fmt.Sprintf("http://localhost:8000/email_verification?code=%s&key=%s", code, verificationID)
 		if err := s.mailingClient.SendVerificationEmail(user.Email, user.Fullname, verificationLink); err != nil {
 			log.WithError(err).Error("Error sending email")
@@ -117,12 +112,6 @@ func (s service) RequestVerification(verificationType string, email string) (ver
 }
 
 func (s service) VerifyAccount(verificationID string, email string, code string) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return err
@@ -144,12 +133,6 @@ func (s service) VerifyAccount(verificationID string, email string, code string)
 }
 
 func (s service) loginWithTFA(user userland.User) (accessToken security.AccessToken, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	code, err := security.GenerateOTP(6)
 	if err != nil {
 		return security.AccessToken{}, err
@@ -169,6 +152,7 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 	tokenKey := keygenerator.TokenKey(accessToken.Key)
 	s.keyValueService.SetEx(tokenKey, []byte(accessToken.Value), security.TFATokenExpiration)
 
+	// TODO return error?
 	if err := s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "TFA Verification", code); err != nil {
 		log.WithError(err).Error("Error sending email")
 	}
@@ -176,12 +160,6 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 }
 
 func (s service) loginNormal(user userland.User) (accessToken security.AccessToken, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
 		Expiration: security.UserAccessTokenExpiration,
 		Scope:      security.UserTokenScope,
@@ -193,12 +171,6 @@ func (s service) loginNormal(user userland.User) (accessToken security.AccessTok
 }
 
 func (s service) Login(email, password string) (requireTFA bool, accessToken security.AccessToken, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return false, security.AccessToken{}, err
@@ -223,12 +195,6 @@ func (s service) Login(email, password string) (requireTFA bool, accessToken sec
 }
 
 func (s service) VerifyTFA(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	// find user
 	user, err := s.userRepository.Find(userID)
 	if err != nil {
@@ -253,20 +219,12 @@ func (s service) VerifyTFA(tfaToken string, userID int, code string) (accessToke
 }
 
 func (s service) VerifyTFABypass(tfaToken string, userID int, code string) (accessToken security.AccessToken, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	// find user
 	user, err := s.userRepository.Find(userID)
 	if err != nil {
 		return security.AccessToken{}, err
 	}
 
-	tfaVerificationID := keygenerator.TFAVerificationKey(user.ID, tfaToken)
-	tfaTokenKey := keygenerator.TokenKey(tfaVerificationID)
 	codeFound := false
 	foundIdx := -1
 	for idx, backupCode := range user.BackupCodes {
@@ -278,24 +236,20 @@ func (s service) VerifyTFABypass(tfaToken string, userID int, code string) (acce
 	}
 
 	if !codeFound {
-		return security.AccessToken{}, errors.New("code doesn't match any backup codes")
+		return security.AccessToken{}, ErrWrongBackupCode
 	}
 
 	user.BackupCodes = append(user.BackupCodes[:foundIdx], user.BackupCodes[foundIdx+1:]...)
 	s.userRepository.StoreBackupCodes(user)
 
+	tfaVerificationID := keygenerator.TFAVerificationKey(user.ID, tfaToken)
+	tfaTokenKey := keygenerator.TokenKey(tfaVerificationID)
 	defer s.keyValueService.Delete(tfaVerificationID)
 	defer s.keyValueService.Delete(tfaTokenKey)
 	return s.loginNormal(user)
 }
 
 func (s service) ForgotPassword(email string) (verificationID string, err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	user, err := s.userRepository.FindByEmail(email)
 	if err != nil {
 		return "", err
@@ -305,6 +259,7 @@ func (s service) ForgotPassword(email string) (verificationID string, err error)
 	forgotPassKey := keygenerator.ForgotPasswordKey(verificationID)
 	s.keyValueService.SetEx(forgotPassKey, []byte(user.Email), security.ForgotPassExpiration)
 	// call mail service
+	// TODO return error?
 	if err := s.mailingClient.SendOTPEmail(user.Email, user.Fullname, "Forgot Password", verificationID); err != nil {
 		log.WithError(err).Error("Error sending email")
 	}
@@ -312,12 +267,6 @@ func (s service) ForgotPassword(email string) (verificationID string, err error)
 }
 
 func (s service) ResetPassword(forgotPassToken string, newPassword string) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
 	// verify token
 	forgotPassKey := keygenerator.ForgotPasswordKey(forgotPassToken)
 	email, err := s.keyValueService.Get(forgotPassKey)

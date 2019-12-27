@@ -18,6 +18,12 @@ import (
 )
 
 var (
+	EventChangeEmailRequest = "user.profile.change_email_request"
+	EventChangeEmail        = "user.profile.change_email"
+	EventChangePassword     = "user.profile.change_password"
+	EventEnableTFA          = "user.profile.enable_tfa"
+	EventDisableTFA         = "user.profile.disable_tfa"
+
 	ErrEmailAlreadyUsed  = errors.New("Email is already used")
 	ErrWrongPassword     = errors.New("Wrong password")
 	ErrTFAAlreadyEnabled = errors.New("TFA already enabled")

@@ -131,6 +131,7 @@ func (suite *EventRepositoryTestSuite) TestInsert() {
 					Timestamp:  time.Now(),
 				},
 			},
+			wantErr: nil,
 		},
 	}
 

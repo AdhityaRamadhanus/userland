@@ -203,7 +203,7 @@ func (h ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Re
 		return
 	}
 
-	defer h.EventService.Log(event.ChangeEmailRequestEvent, userID, clientInfo)
+	defer h.EventService.Log(profile.EventChangeEmailRequest, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
@@ -249,7 +249,7 @@ func (h ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	defer h.EventService.Log(event.ChangeEmailEvent, userID, clientInfo)
+	defer h.EventService.Log(profile.EventChangeEmail, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
@@ -304,7 +304,7 @@ func (h ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	defer h.EventService.Log(event.ChangePasswordEvent, userID, clientInfo)
+	defer h.EventService.Log(profile.EventChangePassword, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 
@@ -388,7 +388,7 @@ func (h ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	defer h.EventService.Log(event.EnableTFAEvent, userID, clientInfo)
+	defer h.EventService.Log(profile.EventEnableTFA, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"backup_codes": backupCodes})
 }
 
@@ -434,7 +434,7 @@ func (h ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	defer h.EventService.Log(event.DisableTFAEvent, userID, clientInfo)
+	defer h.EventService.Log(profile.EventDisableTFA, userID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
 }
 

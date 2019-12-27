@@ -251,7 +251,7 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 		})
 	}
 
-	defer h.EventService.Log(event.LoginEvent, user.ID, clientInfo)
+	defer h.EventService.Log(authentication.EventLogin, user.ID, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{
 		"require_tfa":  requireTFA,
 		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
@@ -296,7 +296,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 	defer func(email string, clientInfo map[string]interface{}) {
 		user, err := h.ProfileService.ProfileByEmail(email)
 		if err == nil {
-			h.EventService.Log(event.ForgotPasswordEvent, user.ID, clientInfo)
+			h.EventService.Log(authentication.EventForgotPassword, user.ID, clientInfo)
 		}
 	}(email, clientInfo)
 	render.JSON(res, http.StatusOK, map[string]interface{}{"success": true})
