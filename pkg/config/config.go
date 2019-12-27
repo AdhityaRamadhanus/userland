@@ -30,8 +30,8 @@ type MailConfig struct {
 	Host         string `yaml:"host" envconfig:"MAIL_HOST"`
 	Sender       string `yaml:"sender" envconfig:"MAIL_SENDER"`
 	Queue        string `yaml:"queue" envconfig:"MAIL_QUEUE"`
-	AuthUser     string `yaml:"auth_user" envconfig:"MAIL_BASIC_USER"`
-	AuthPassword string `yaml:"auth_password" envconfig:"MAIL_BASIC_PASSWORD"`
+	AuthUser     string `yaml:"auth_user" envconfig:"MAIL_AUTH_USER"`
+	AuthPassword string `yaml:"auth_password" envconfig:"MAIL_AUTH_PASSWORD"`
 	WorkerSpace  string `yaml:"worker_space" envconfig:"MAIL_WORKER_SPACE"`
 }
 
