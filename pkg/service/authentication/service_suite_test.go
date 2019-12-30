@@ -13,6 +13,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/postgres"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/redis"
+	"github.com/AdhityaRamadhanus/userland/pkg/userlandtest"
 
 	_redis "github.com/go-redis/redis"
 	"github.com/jmoiron/sqlx"
@@ -129,13 +130,8 @@ func (suite AuthenticationServiceTestSuite) TestRegister() {
 }
 
 func (suite AuthenticationServiceTestSuite) TestRequestVerification_email() {
-	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test123"),
-	})
-
+	// create defaultUser with email adhitya.ramadhanus@gmail.com
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 	type args struct {
 		email string
 	}
@@ -148,7 +144,7 @@ func (suite AuthenticationServiceTestSuite) TestRequestVerification_email() {
 		{
 			name: "success",
 			args: args{
-				email: "adhitya.ramadhanus@gmail.com",
+				email: defaultUser.Email,
 			},
 			wantErr: nil,
 		},
@@ -173,11 +169,7 @@ func (suite AuthenticationServiceTestSuite) TestRequestVerification_email() {
 
 func (suite AuthenticationServiceTestSuite) TestVerifyAccount_email() {
 	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test123"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		email string
@@ -189,7 +181,7 @@ func (suite AuthenticationServiceTestSuite) TestVerifyAccount_email() {
 		{
 			name: "success",
 			args: args{
-				email: "adhitya.ramadhanus@gmail.com",
+				email: defaultUser.Email,
 			},
 		},
 	}
@@ -229,11 +221,8 @@ func (suite AuthenticationServiceTestSuite) TestVerifyAccount_email() {
 
 func (suite AuthenticationServiceTestSuite) TestLogin_withoutTFA() {
 	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test123"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
+	verifiedUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository, userlandtest.WithUserEmail("verified@gmail.com"), userlandtest.Verified(true))
 
 	type args struct {
 		email    string
@@ -248,18 +237,16 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withoutTFA() {
 		{
 			name: "not_verified_user",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
+				email:    defaultUser.Email,
 				password: "test123",
-				verified: false,
 			},
 			wantErr: authentication.ErrUserNotVerified,
 		},
 		{
 			name: "verified_user",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
+				email:    verifiedUser.Email,
 				password: "test123",
-				verified: true,
 			},
 			wantErr: nil,
 		},
@@ -267,17 +254,6 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withoutTFA() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			// setup
-			user, err := suite.UserRepository.FindByEmail(tc.args.email)
-			if err != nil {
-				t.Fatalf("UserRepository.FindByEmail(%q) err = %v; want nil", tc.args.email, err)
-			}
-
-			user.Verified = tc.args.verified
-			if err := suite.UserRepository.Update(user); err != nil {
-				t.Fatalf("UserRepository.Update(user) err = %v; want nil", err)
-			}
-
 			requireTFA, _, err := suite.AuthenticationService.Login(tc.args.email, tc.args.password)
 			if err != tc.wantErr {
 				t.Fatalf("AuthenticationService.Login(%q, %q) err = %v; want %v", tc.args.email, tc.args.password, err, tc.wantErr)
@@ -299,11 +275,8 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withoutTFA() {
 
 func (suite AuthenticationServiceTestSuite) TestLogin_withTFA() {
 	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test123"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
+	verifiedUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository, userlandtest.WithUserEmail("verified@gmail.com"), userlandtest.Verified(true))
 
 	type args struct {
 		email    string
@@ -318,7 +291,7 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withTFA() {
 		{
 			name: "not_verified_user",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
+				email:    defaultUser.Email,
 				password: "test123",
 				verified: false,
 			},
@@ -327,7 +300,7 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withTFA() {
 		{
 			name: "verified_user",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
+				email:    verifiedUser.Email,
 				password: "test123",
 				verified: true,
 			},
@@ -371,11 +344,7 @@ func (suite AuthenticationServiceTestSuite) TestLogin_withTFA() {
 
 func (suite AuthenticationServiceTestSuite) TestVerifyTFA() {
 	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test123"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		email    string
@@ -390,7 +359,7 @@ func (suite AuthenticationServiceTestSuite) TestVerifyTFA() {
 		{
 			name: "success",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
+				email:    defaultUser.Email,
 				password: "test123",
 			},
 			wantErr: nil,
@@ -435,11 +404,7 @@ func (suite AuthenticationServiceTestSuite) TestVerifyTFA() {
 
 func (suite AuthenticationServiceTestSuite) TestVerifyTFABypass() {
 	// setup
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test1234"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		email       string
@@ -455,8 +420,8 @@ func (suite AuthenticationServiceTestSuite) TestVerifyTFABypass() {
 		{
 			name: "success",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
-				password: "test1234",
+				email:    defaultUser.Email,
+				password: userlandtest.DefaultUserPassword,
 				backupCodes: []string{
 					"backupCode1",
 					"backupCode3",
@@ -469,8 +434,8 @@ func (suite AuthenticationServiceTestSuite) TestVerifyTFABypass() {
 		{
 			name: "wrong backup code",
 			args: args{
-				email:    "adhitya.ramadhanus@gmail.com",
-				password: "test1234",
+				email:    defaultUser.Email,
+				password: userlandtest.DefaultUserPassword,
 				backupCodes: []string{
 					"backupCode1",
 				},
@@ -520,11 +485,7 @@ func (suite AuthenticationServiceTestSuite) TestVerifyTFABypass() {
 }
 
 func (suite AuthenticationServiceTestSuite) TestForgotPassword() {
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test1234"),
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		email string
@@ -538,7 +499,7 @@ func (suite AuthenticationServiceTestSuite) TestForgotPassword() {
 		{
 			name: "success",
 			args: args{
-				email: "adhitya.ramadhanus@gmail.com",
+				email: defaultUser.Email,
 			},
 			wantErr: nil,
 		},
@@ -561,12 +522,7 @@ func (suite AuthenticationServiceTestSuite) TestForgotPassword() {
 }
 
 func (suite AuthenticationServiceTestSuite) TestResetPasswordIntegration() {
-	suite.UserRepository.Insert(userland.User{
-		Email:    "adhitya.ramadhanus@gmail.com",
-		Fullname: "Adhitya Ramadhanus",
-		Password: security.HashPassword("test1234"),
-		Verified: true,
-	})
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository, userlandtest.Verified(true))
 
 	type args struct {
 		email       string
@@ -581,7 +537,7 @@ func (suite AuthenticationServiceTestSuite) TestResetPasswordIntegration() {
 		{
 			name: "success",
 			args: args{
-				email:       "adhitya.ramadhanus@gmail.com",
+				email:       defaultUser.Email,
 				newPassword: "test123",
 			},
 			wantErr: nil,

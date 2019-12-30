@@ -145,7 +145,7 @@ func (s UserRepository) Delete(id int) error {
 }
 
 //Insert insert story to datastore
-func (s UserRepository) Insert(user userland.User) error {
+func (s UserRepository) Insert(user *userland.User) error {
 	query := `INSERT INTO users (
 				email, 
 				fullname, 
@@ -177,13 +177,15 @@ func (s UserRepository) Insert(user userland.User) error {
 		return errors.Wrap(err, "db.PrepareNamed(query) err")
 	}
 
-	if _, err = stmt.Query(user); err != nil {
+	row := stmt.QueryRow(user)
+	if err := row.Err(); err != nil {
 		if err.(*pq.Error).Code.Name() == "unique_violation" {
 			return userland.ErrDuplicateKey
 		}
 		return errors.Wrap(err, "stmt.Query(user) err")
 	}
 
+	row.Scan(&user.ID)
 	return nil
 }
 

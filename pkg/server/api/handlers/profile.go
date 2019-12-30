@@ -558,8 +558,6 @@ func (h ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
 
 func (h ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
-	user, err := h.ProfileService.Profile(userID)
-
 	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
 	if limit == 0 {
 		limit = 20
@@ -589,12 +587,16 @@ func (h ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	events, eventsCount, err := h.ProfileService.ListEvents(user, userland.EventPagingOptions{
+	filter := userland.EventFilterOptions{
+		UserID: userID,
+	}
+	paging := userland.EventPagingOptions{
 		Limit:  limit,
 		Offset: (page - 1) * limit,
 		SortBy: "timestamp",
 		Order:  order,
-	})
+	}
+	events, eventsCount, err := h.EventService.ListEvents(filter, paging)
 	if err != nil {
 		h.handleServiceError(res, req, err)
 		return

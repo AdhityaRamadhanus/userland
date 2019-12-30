@@ -20,7 +20,7 @@ var (
 	ErrWrongPassword         = errors.New("Wrong password")
 	ErrServiceNotImplemented = errors.New("Service not implemented")
 	ErrWrongOTP              = errors.New("Wrong OTP")
-	ErrWrongBackupCode = errors.New("code doesn't match any backup codes")
+	ErrWrongBackupCode       = errors.New("code doesn't match any backup codes")
 	ErrOTPInvalid            = errors.New("OTP Invalid")
 )
 
@@ -71,7 +71,7 @@ type service struct {
 
 func (s service) Register(user userland.User) (err error) {
 	user.Password = security.HashPassword(user.Password)
-	if err := s.userRepository.Insert(user); err != nil {
+	if err := s.userRepository.Insert(&user); err != nil {
 		if err == userland.ErrDuplicateKey {
 			return ErrUserRegistered
 		}

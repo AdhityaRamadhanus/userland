@@ -97,7 +97,6 @@ func main() {
 	// authInstSvc := authentication.NewInstrumentorService(metrics.PrometheusRequestLatency("service", "authentication", authentication.MetricKeys), authSvc)
 
 	profileSvc := profile.NewService(
-		profile.WithEventRepository(eventRepository),
 		profile.WithKeyValueService(keyValueSvc),
 		profile.WithMailingClient(mailClient),
 		profile.WithObjectStorageService(objectStorageSvc),

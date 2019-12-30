@@ -36,7 +36,7 @@ var (
 type UserRepository interface {
 	Find(id int) (User, error)
 	FindByEmail(email string) (User, error)
-	Insert(user User) error
+	Insert(user *User) error
 	Update(user User) error
 	// problematic func here
 	StoreBackupCodes(user User) error

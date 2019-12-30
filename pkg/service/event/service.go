@@ -15,6 +15,7 @@ var (
 type Service interface {
 	Log(eventName string, userID int, clientInfo map[string]interface{}) error
 	ListEvents(filter userland.EventFilterOptions, paging userland.EventPagingOptions) (events userland.Events, count int, err error)
+	DeleteEventsByUserID(userID int) error
 }
 
 func WithEventRepository(eventRepository userland.EventRepository) func(service *service) {
@@ -62,4 +63,8 @@ func (s service) Log(eventName string, userID int, clientInfo map[string]interfa
 
 func (s service) ListEvents(filter userland.EventFilterOptions, paging userland.EventPagingOptions) (events userland.Events, count int, err error) {
 	return s.eventRepository.FindAll(filter, paging)
+}
+
+func (s service) DeleteEventsByUserID(userID int) error {
+	return s.eventRepository.DeleteAllByUserID(userID)
 }

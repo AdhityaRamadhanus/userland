@@ -42,3 +42,11 @@ func (s *instrumentorService) ListEvents(filter userland.EventFilterOptions, pag
 
 	return s.next.ListEvents(filter, paging)
 }
+
+func (s *instrumentorService) DeleteEventsByUserID(userID int) error {
+	defer func(begin time.Time) {
+		s.requestLatency.With("method", "DeleteEventsByUserID").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return s.next.DeleteEventsByUserID(userID)
+}

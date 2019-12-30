@@ -5,13 +5,13 @@ package postgres_test
 import (
 	"testing"
 
+	"github.com/AdhityaRamadhanus/userland"
+	"github.com/AdhityaRamadhanus/userland/pkg/config"
+	"github.com/AdhityaRamadhanus/userland/pkg/storage/postgres"
+	"github.com/AdhityaRamadhanus/userland/pkg/userlandtest"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
-	"github.com/AdhityaRamadhanus/userland"
-	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
-	"github.com/AdhityaRamadhanus/userland/pkg/config"
-	"github.com/AdhityaRamadhanus/userland/pkg/storage/postgres"
 )
 
 type UserRepositoryTestSuite struct {
@@ -80,7 +80,7 @@ func (suite *UserRepositoryTestSuite) TestInsert() {
 	}
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			err := suite.UserRepository.Insert(tc.args.user)
+			err := suite.UserRepository.Insert(&tc.args.user)
 			if err != tc.wantErr {
 				t.Fatalf("UserRepository.Insert(user) err = %v; want %v", err, tc.wantErr)
 			}
@@ -89,11 +89,7 @@ func (suite *UserRepositoryTestSuite) TestInsert() {
 }
 
 func (suite *UserRepositoryTestSuite) TestFindByEmail() {
-	suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, created_at, updated_at)
-		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
-		security.HashPassword("test123"),
-	)
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		email string
@@ -107,7 +103,7 @@ func (suite *UserRepositoryTestSuite) TestFindByEmail() {
 		{
 			name: "found",
 			args: args{
-				email: "adhitya.ramadhanus@gmail.com",
+				email: defaultUser.Email,
 			},
 			wantErr: nil,
 		},
@@ -134,13 +130,7 @@ func (suite *UserRepositoryTestSuite) TestFindByEmail() {
 }
 
 func (suite *UserRepositoryTestSuite) TestFindByID() {
-	var lastUserID int
-	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, created_at, updated_at)
-		VALUES ('Adhitya Ramadhanus', 'adhitya.ramadhanus@gmail.com', $1, now(), now()) RETURNING id`,
-		security.HashPassword("test123"),
-	)
-	row.Scan(&lastUserID)
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		userID int
@@ -154,14 +144,14 @@ func (suite *UserRepositoryTestSuite) TestFindByID() {
 		{
 			name: "found",
 			args: args{
-				userID: lastUserID,
+				userID: defaultUser.ID,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "not found",
 			args: args{
-				userID: lastUserID + 1,
+				userID: defaultUser.ID + 1,
 			},
 			wantErr: userland.ErrUserNotFound,
 		},
@@ -181,14 +171,7 @@ func (suite *UserRepositoryTestSuite) TestFindByID() {
 }
 
 func (suite *UserRepositoryTestSuite) TestUpdate() {
-	var lastUserID int
-	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, created_at, updated_at)
-		VALUES ('Adhitya Ramadhanus', $1, $2, now(), now()) RETURNING id`,
-		"adhitya.ramadhanus@gmail.com",
-		security.HashPassword("test123"),
-	)
-	row.Scan(&lastUserID)
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		user userland.User
@@ -203,7 +186,7 @@ func (suite *UserRepositoryTestSuite) TestUpdate() {
 			name: "found",
 			args: args{
 				user: userland.User{
-					ID: lastUserID,
+					ID:         defaultUser.ID,
 					Fullname:   "Adhitya Ramadhanus",
 					TFAEnabled: true,
 					Email:      "adhitya.ramadhanus@gmail.com",
@@ -217,7 +200,7 @@ func (suite *UserRepositoryTestSuite) TestUpdate() {
 			name: "not found",
 			args: args{
 				user: userland.User{
-					ID: lastUserID + 1,
+					ID:         defaultUser.ID + 1,
 					Fullname:   "Adhitya Ramadhanus",
 					TFAEnabled: true,
 					Email:      "adhitya@gmail.com",
@@ -240,14 +223,7 @@ func (suite *UserRepositoryTestSuite) TestUpdate() {
 }
 
 func (suite *UserRepositoryTestSuite) TestStoreBackupCodes() {
-	var lastUserID int
-	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, created_at, updated_at)
-		VALUES ('Adhitya Ramadhanus', $1, $2, now(), now()) RETURNING id`,
-		"adhitya.ramadhanus@gmail.com",
-		security.HashPassword("test123"),
-	)
-	row.Scan(&lastUserID)
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		user userland.User
@@ -262,7 +238,7 @@ func (suite *UserRepositoryTestSuite) TestStoreBackupCodes() {
 			name: "found",
 			args: args{
 				user: userland.User{
-					ID: lastUserID,
+					ID:          defaultUser.ID,
 					Email:       "adhitya.ramadhanus@gmail.com",
 					BackupCodes: []string{"xxx", "xxx"},
 				},
@@ -273,7 +249,7 @@ func (suite *UserRepositoryTestSuite) TestStoreBackupCodes() {
 			name: "not found",
 			args: args{
 				user: userland.User{
-					ID: lastUserID + 1,
+					ID:          defaultUser.ID + 1,
 					Email:       "adhitya@gmail.com",
 					BackupCodes: []string{"xxx", "xxx"},
 				},
@@ -293,14 +269,7 @@ func (suite *UserRepositoryTestSuite) TestStoreBackupCodes() {
 }
 
 func (suite *UserRepositoryTestSuite) TestDelete() {
-	var lastUserID int
-	row := suite.DB.QueryRow(
-		`INSERT INTO users (fullname, email, password, created_at, updated_at)
-		VALUES ('Adhitya Ramadhanus', $1, $2, now(), now()) RETURNING id`,
-		"adhitya.ramadhanus@gmail.com",
-		security.HashPassword("test123"),
-	)
-	row.Scan(&lastUserID)
+	defaultUser := userlandtest.TestCreateUser(suite.T(), suite.UserRepository)
 
 	type args struct {
 		userID int
@@ -314,14 +283,14 @@ func (suite *UserRepositoryTestSuite) TestDelete() {
 		{
 			name: "found",
 			args: args{
-				userID: lastUserID,
+				userID: defaultUser.ID,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "not found",
 			args: args{
-				userID: lastUserID + 1,
+				userID: defaultUser.ID + 1,
 			},
 			wantErr: userland.ErrUserNotFound,
 		},
