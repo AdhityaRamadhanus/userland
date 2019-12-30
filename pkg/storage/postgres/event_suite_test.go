@@ -45,12 +45,12 @@ func (suite *EventRepositoryTestSuite) SetupTest() {
 	}
 }
 
-func (suite *EventRepositoryTestSuite) TestFindAllByUserID() {
+func (suite *EventRepositoryTestSuite) TestFindAll() {
 	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES (1, 'authentication.login', 1, 'userland-app', now(), now())`)
 	suite.DB.QueryRow(`INSERT INTO events (user_id, event, client_id, client_name, timestamp, created_at) VALUES (1, 'authentication.tfa', 1, 'userland-app', now(), now())`)
 
 	type args struct {
-		userID int
+		filter userland.EventFilterOptions
 		paging userland.EventPagingOptions
 	}
 	testCases := []struct {
@@ -68,7 +68,9 @@ func (suite *EventRepositoryTestSuite) TestFindAllByUserID() {
 					Limit:  1,
 					Order:  "desc",
 				},
-				userID: 1,
+				filter: userland.EventFilterOptions{
+					UserID: 1,
+				},
 			},
 			wantTotalCount: 2,
 			wantCount:      1,
@@ -82,7 +84,9 @@ func (suite *EventRepositoryTestSuite) TestFindAllByUserID() {
 					Limit:  2,
 					Order:  "desc",
 				},
-				userID: 1,
+				filter: userland.EventFilterOptions{
+					UserID: 1,
+				},
 			},
 			wantTotalCount: 2,
 			wantCount:      2,
@@ -91,18 +95,18 @@ func (suite *EventRepositoryTestSuite) TestFindAllByUserID() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			events, count, err := suite.EventRepository.FindAllByUserID(tc.args.userID, tc.args.paging)
+			events, count, err := suite.EventRepository.FindAll(tc.args.filter, tc.args.paging)
 			if err != nil {
-				t.Fatalf("EventRepository.FindAllByUserID() err = %v; want nil", err)
+				t.Fatalf("EventRepository.FindAll() err = %v; want nil", err)
 			}
 
 			gotEventsCount := len(events)
 			if gotEventsCount != tc.wantCount {
-				t.Errorf("EventRepository.FindAllByUserID() len(events) = %d; want %d", gotEventsCount, tc.wantCount)
+				t.Errorf("EventRepository.FindAll() len(events) = %d; want %d", gotEventsCount, tc.wantCount)
 			}
 
 			if count != tc.wantTotalCount {
-				t.Errorf("EventRepository.FindAllByUserID() totalCount = %d; want %d", count, tc.wantTotalCount)
+				t.Errorf("EventRepository.FindAll() totalCount = %d; want %d", count, tc.wantTotalCount)
 			}
 		})
 	}

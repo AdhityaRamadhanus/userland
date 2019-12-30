@@ -20,6 +20,12 @@ type Event struct {
 //Events is collection of Event
 type Events []Event
 
+type EventFilterOptions struct {
+	UserID int
+	Event  string
+	IP     string
+}
+
 //EventPagingOptions is a struct used as pagination option to get events
 type EventPagingOptions struct {
 	Limit  int
@@ -30,7 +36,7 @@ type EventPagingOptions struct {
 
 //EventRepository provide an interface to get user events
 type EventRepository interface {
-	FindAllByUserID(userID int, pagingOptions EventPagingOptions) (Events, int, error)
+	FindAll(filter EventFilterOptions, paging EventPagingOptions) (Events, int, error)
 	Insert(event Event) error
 	DeleteAllByUserID(userID int) error
 }

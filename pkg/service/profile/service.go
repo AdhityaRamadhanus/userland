@@ -295,7 +295,7 @@ func (s service) ListEvents(user userland.User, pagingOptions userland.EventPagi
 		}
 	}()
 
-	return s.eventRepository.FindAllByUserID(user.ID, pagingOptions)
+	return s.eventRepository.FindAll(userland.EventFilterOptions{UserID: user.ID}, pagingOptions)
 }
 
 func (s service) SetProfilePicture(user userland.User, image io.Reader) (err error) {

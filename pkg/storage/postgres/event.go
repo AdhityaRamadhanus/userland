@@ -3,10 +3,12 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 type EventScanStruct struct {
@@ -37,8 +39,37 @@ func NewEventRepository(conn *sqlx.DB) *EventRepository {
 }
 
 //Find User by id
-func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagingOptions) (events userland.Events, eventsCount int, err error) {
+func (e EventRepository) FindAll(filter userland.EventFilterOptions, paging userland.EventPagingOptions) (events userland.Events, eventsCount int, err error) {
 	scanStructEvents := []EventScanStruct{}
+
+	whereArgs := []interface{}{}
+	whereSubStatements := []string{}
+	whereStatement := "WHERE %s"
+	// build where sub queries, append to whereSubStatements eg: ["user_id=$1", "ip=$2", "event=$3"]
+	if filter.UserID > 0 {
+		whereArgs = append(whereArgs, filter.UserID)
+		whereSubStatements = append(whereSubStatements, fmt.Sprintf("user_id=$%d", len(whereArgs)))
+	}
+
+	if len(filter.IP) > 0 {
+		whereArgs = append(whereArgs, filter.IP)
+		whereSubStatements = append(whereSubStatements, fmt.Sprintf("ip=$%d", len(whereArgs)))
+	}
+
+	if len(filter.Event) > 0 {
+		whereArgs = append(whereArgs, filter.Event)
+		whereSubStatements = append(whereSubStatements, fmt.Sprintf("event=$%d", len(whereArgs)))
+	}
+
+	if len(whereArgs) == 0 {
+		whereStatement = ""
+	} else {
+		// build where queries from sub queries,
+		// eg: whereSubStatements = ["order_id=$1", "product_id=$2", "name=$3"]
+		// whereStatement = "WHERE order_id=$1 AND product_id=$2 AND name=$3"
+		whereStatement = fmt.Sprintf(whereStatement, strings.Join(whereSubStatements, "AND "))
+	}
+
 	selectQuery := fmt.Sprintf(
 		`SELECT
 			id,
@@ -51,27 +82,28 @@ func (e EventRepository) FindAllByUserID(userID int, options userland.EventPagin
 			timestamp,
 			created_at
 		FROM events 
-		WHERE user_id=$1
+		%s
 		ORDER BY %s %s 
 		LIMIT %d 
 		OFFSET %d`,
-		options.SortBy,
-		options.Order,
-		options.Limit,
-		options.Offset,
+		whereStatement,
+		paging.SortBy,
+		paging.Order,
+		paging.Limit,
+		paging.Offset,
 	)
 
 	stmt, err := e.db.Preparex(selectQuery)
 	if err != nil {
-		return userland.Events{}, 0, err
+		return userland.Events{}, 0, errors.Wrap(err, "db.Preparex() err")
 	}
 
-	if err := stmt.Select(&scanStructEvents, userID); err != nil {
-		return userland.Events{}, 0, err
+	if err := stmt.Select(&scanStructEvents, whereArgs...); err != nil {
+		return userland.Events{}, 0, errors.Wrap(err, "stmt.Select() err")
 	}
 
-	countQuery := `SELECT count(*) FROM events WHERE user_id=$1`
-	row := e.db.QueryRow(countQuery, userID)
+	countQuery := fmt.Sprintf(`SELECT count(*) FROM events %s`, whereStatement)
+	row := e.db.QueryRow(countQuery, whereArgs...)
 	row.Scan(&eventsCount)
 
 	events = userland.Events{}
