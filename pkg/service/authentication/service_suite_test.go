@@ -8,6 +8,7 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/keygenerator"
+	"github.com/AdhityaRamadhanus/userland/pkg/common/metrics"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
 	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/postgres"
@@ -59,6 +60,10 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 		authentication.WithKeyValueService(suite.KeyValueService),
 		authentication.WithMailingClient(mailing.NewMailingClient("")),
 		authentication.WithUserRepository(suite.UserRepository),
+	)
+	suite.AuthenticationService = authentication.NewInstrumentorService(
+		metrics.PrometheusRequestLatency("service", "authentication", authentication.MetricKeys),
+		suite.AuthenticationService,
 	)
 }
 
