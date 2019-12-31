@@ -2,14 +2,12 @@ package mailing
 
 import (
 	"bytes"
-	b64 "encoding/base64"
 	"encoding/json"
-
-	"github.com/go-errors/errors"
-
 	"fmt"
 	"net/http"
-	"time"
+
+	_http "github.com/AdhityaRamadhanus/userland/pkg/common/http"
+	"github.com/pkg/errors"
 )
 
 type Client interface {
@@ -21,7 +19,7 @@ type client struct {
 	username   string
 	password   string
 	baseURL    string
-	httpClient *http.Client
+	httpClient _http.Client
 }
 
 func WithBasicAuth(username, password string) func(client *client) {
@@ -31,9 +29,9 @@ func WithBasicAuth(username, password string) func(client *client) {
 	}
 }
 
-func WithClientTimeout(timeout time.Duration) func(client *client) {
+func WithHTTPClient(c _http.Client) func(client *client) {
 	return func(client *client) {
-		client.httpClient.Timeout = timeout
+		client.httpClient = c
 	}
 }
 
@@ -58,13 +56,18 @@ func (c client) SendOTPEmail(recipientAddress string, recipientName string, otpT
 		"otp":            otp,
 		"type":           otpType,
 	}
-	jsonBytes, _ := json.Marshal(requestBody)
+	jsonBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return errors.Wrapf(err, "json.Marshal() err")
+	}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return errors.Wrapf(err, "http.NewRequest() err")
+	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", b64.StdEncoding.EncodeToString([]byte(c.username+":"+c.password))))
+	req.SetBasicAuth(c.username, c.password)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -88,10 +91,9 @@ func (c client) SendVerificationEmail(recipientAddress string, recipientName str
 	jsonBytes, _ := json.Marshal(requestBody)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBytes))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", b64.StdEncoding.EncodeToString([]byte(c.username+":"+c.password))))
+	req.SetBasicAuth(c.username, c.password)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
