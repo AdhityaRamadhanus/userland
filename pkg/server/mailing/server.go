@@ -40,7 +40,6 @@ func (s Server) CreateHTTPServer() *http.Server {
 		gziphandler.GzipHandler,
 		middlewares.TraceRequest,
 		alice.Constructor(middlewares.LogMetricRequest(
-			metrics.PrometheusRequestCounter("mailing", "server", middlewares.LogMetricKeys),
 			metrics.PrometheusRequestLatency("mailing", "server", middlewares.LogMetricKeys),
 		)),
 	}

@@ -6,16 +6,7 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-// return counter and histogram
-func PrometheusRequestCounter(namespace, service string, fieldKeys []string) metrics.Counter {
-	return kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Namespace: namespace,
-		Subsystem: service,
-		Name:      "request_count",
-		Help:      "Number of requests received.",
-	}, fieldKeys)
-}
-
+// return histogram
 func PrometheusRequestLatency(namespace, service string, fieldKeys []string) metrics.Histogram {
 	return kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
 		Namespace: namespace,

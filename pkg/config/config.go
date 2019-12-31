@@ -10,14 +10,15 @@ import (
 
 // Configuration provide package level configuration for vendtron by reading from config.yaml first then overwrite if any with env (Default read from .env)
 type Configuration struct {
-	Env      string         `yaml:"env"`
-	API      ApiConfig      `yaml:"api"`
-	Mail     MailConfig     `yaml:"mail"`
-	Redis    RedisConfig    `yaml:"redis"`
-	Postgres PostgresConfig `yaml:"postgres"`
-	Mailjet  MailjetConfig  `yaml:"mailjet"`
-	GCP      GCPConfig      `yaml:"gcp"`
-	Log      LogConfig      `yaml:"log"`
+	Env       string         `yaml:"env"`
+	API       ApiConfig      `yaml:"api"`
+	Mail      MailConfig     `yaml:"mail"`
+	Redis     RedisConfig    `yaml:"redis"`
+	Postgres  PostgresConfig `yaml:"postgres"`
+	Mailjet   MailjetConfig  `yaml:"mailjet"`
+	GCP       GCPConfig      `yaml:"gcp"`
+	Log       LogConfig      `yaml:"log"`
+	JWTSecret string         `yaml:"jwt_secret" envconfig:"JWT_SECRET"`
 }
 
 type ApiConfig struct {

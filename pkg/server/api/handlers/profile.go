@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/server/api/serializers"
-	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
@@ -28,7 +27,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/service/profile"
 
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type ProfileHandler struct {
@@ -86,7 +84,7 @@ func (h ProfileHandler) getProfile(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -97,7 +95,7 @@ func (h ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Request
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -143,7 +141,7 @@ func (h ProfileHandler) updateProfile(res http.ResponseWriter, req *http.Request
 	}
 
 	if err = h.ProfileService.SetProfile(user); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -154,7 +152,7 @@ func (h ProfileHandler) getEmail(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -167,7 +165,7 @@ func (h ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Re
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -199,7 +197,7 @@ func (h ProfileHandler) requestChangeEmail(res http.ResponseWriter, req *http.Re
 	}
 
 	if _, err = h.ProfileService.RequestChangeEmail(user, changeEmailRequest.Email); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -213,7 +211,7 @@ func (h ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) 
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -245,7 +243,7 @@ func (h ProfileHandler) changeEmail(res http.ResponseWriter, req *http.Request) 
 	}
 
 	if err = h.ProfileService.ChangeEmail(user, changeEmailRequest.Token); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -259,7 +257,7 @@ func (h ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reques
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -300,7 +298,7 @@ func (h ProfileHandler) changePassword(res http.ResponseWriter, req *http.Reques
 	oldPassword := changePasswordRequest.CurrentPassword
 	newPassword := changePasswordRequest.NewPassword
 	if err = h.ProfileService.ChangePassword(user, oldPassword, newPassword); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -312,7 +310,7 @@ func (h ProfileHandler) getTFAStatus(res http.ResponseWriter, req *http.Request)
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -329,13 +327,13 @@ func (h ProfileHandler) enrollTFA(res http.ResponseWriter, req *http.Request) {
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
 	secret, qrCodeImageBase64, err := h.ProfileService.EnrollTFA(user)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -351,7 +349,7 @@ func (h ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) 
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -384,7 +382,7 @@ func (h ProfileHandler) activateTFA(res http.ResponseWriter, req *http.Request) 
 
 	backupCodes, err := h.ProfileService.ActivateTFA(user, activateTFARequest.Secret, activateTFARequest.Code)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -398,7 +396,7 @@ func (h ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -430,7 +428,7 @@ func (h ProfileHandler) removeTFA(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err = h.ProfileService.RemoveTFA(user, removeTFARequest.CurrentPassword); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -442,7 +440,7 @@ func (h ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Request
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -474,7 +472,7 @@ func (h ProfileHandler) deleteAccount(res http.ResponseWriter, req *http.Request
 	}
 
 	if err = h.ProfileService.DeleteAccount(user, removeTFARequest.CurrentPassword); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -485,14 +483,14 @@ func (h ProfileHandler) deletePicture(res http.ResponseWriter, req *http.Request
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
 	user.PictureURL = ""
 	err = h.ProfileService.SetProfile(user)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -503,7 +501,7 @@ func (h ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
 	userID := getUserIDFromContext(req)
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -519,7 +517,7 @@ func (h ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
 			render.InvalidRequestError(res, err)
 			return
 		}
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 	defer file.Close()
@@ -549,7 +547,7 @@ func (h ProfileHandler) setPicture(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := h.ProfileService.SetProfilePicture(user, bytes.NewReader(imageBytes)); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -598,7 +596,7 @@ func (h ProfileHandler) getEvents(res http.ResponseWriter, req *http.Request) {
 	}
 	events, eventsCount, err := h.EventService.ListEvents(filter, paging)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -638,56 +636,4 @@ func serializeEvents(events []userland.Event) []map[string]interface{} {
 	}
 
 	return serializedEvents
-}
-
-func (h ProfileHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
-	ServiceErrorsHTTPMapping := map[error]struct {
-		HTTPCode int
-		ErrCode  string
-	}{
-		userland.ErrUserNotFound: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrUserNotFound",
-		},
-		profile.ErrWrongOTP: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrWrongOTP",
-		},
-		profile.ErrWrongPassword: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrWrongPassword",
-		},
-		profile.ErrEmailAlreadyUsed: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrEmailAlreadyUsed",
-		},
-	}
-
-	errorMapping, isErrorMapped := ServiceErrorsHTTPMapping[err]
-	if isErrorMapped {
-		render.JSON(res, errorMapping.HTTPCode, map[string]interface{}{
-			"status": errorMapping.HTTPCode,
-			"error": map[string]interface{}{
-				"code":    errorMapping.ErrCode,
-				"message": err.Error(),
-			},
-		})
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
-		"endpoint":     req.URL.Path,
-		"client":       req.Header.Get("X-API-ClientID"),
-		"x-request-id": req.Header.Get("X-Request-ID"),
-	}).WithError(err).Error("Error Profile Handler")
-
-	render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-		"status": http.StatusInternalServerError,
-		"error": map[string]interface{}{
-			"code":    "ErrInternalServer",
-			"message": "userland api unable to process the request",
-		},
-	})
-	return
 }

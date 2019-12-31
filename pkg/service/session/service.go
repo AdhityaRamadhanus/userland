@@ -4,6 +4,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
+	"github.com/AdhityaRamadhanus/userland/pkg/config"
 )
 
 //Service provide an interface to story domain service
@@ -28,6 +29,12 @@ func WithKeyValueService(keyValueService userland.KeyValueService) func(service 
 	}
 }
 
+func WithConfiguration(cfg *config.Configuration) func(service *service) {
+	return func(service *service) {
+		service.config = cfg
+	}
+}
+
 func NewService(options ...func(*service)) Service {
 	service := &service{}
 	for _, option := range options {
@@ -38,6 +45,7 @@ func NewService(options ...func(*service)) Service {
 }
 
 type service struct {
+	config            *config.Configuration
 	keyValueService   userland.KeyValueService
 	sessionRepository userland.SessionRepository
 }
@@ -79,7 +87,7 @@ func (s service) EndOtherSessions(userID int, currentSessionID string) (err erro
 }
 
 func (s service) CreateRefreshToken(user userland.User, currentSessionID string) (accessToken security.AccessToken, err error) {
-	refreshToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
+	refreshToken, err := security.CreateAccessToken(user, s.config.JWTSecret, security.AccessTokenOptions{
 		Scope:      security.RefreshTokenScope,
 		Expiration: security.RefreshAccessTokenExpiration,
 		CustomClaim: map[string]interface{}{
@@ -97,7 +105,7 @@ func (s service) CreateRefreshToken(user userland.User, currentSessionID string)
 }
 
 func (s service) CreateNewAccessToken(user userland.User, refreshTokenID string) (accessToken security.AccessToken, err error) {
-	newAccessToken, err := security.CreateAccessToken(user, security.AccessTokenOptions{
+	newAccessToken, err := security.CreateAccessToken(user, s.config.JWTSecret, security.AccessTokenOptions{
 		Scope:      security.UserTokenScope,
 		Expiration: security.UserAccessTokenExpiration,
 	})

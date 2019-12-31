@@ -51,6 +51,7 @@ func (suite *SessionServiceTestSuite) SetupSuite() {
 	suite.KeyValueService = redis.NewKeyValueService(redisClient)
 	suite.SessionRepository = redis.NewSessionRepository(redisClient)
 	suite.SessionService = session.NewService(
+		session.WithConfiguration(suite.Config),
 		session.WithKeyValueService(suite.KeyValueService),
 		session.WithSessionRepository(suite.SessionRepository),
 	)

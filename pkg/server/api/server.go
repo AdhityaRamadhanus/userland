@@ -43,7 +43,6 @@ func (s Server) CreateHTTPServer() *http.Server {
 		middlewares.ParseClientInfo,
 		cors.Default().Handler,
 		alice.Constructor(middlewares.LogMetricRequest(
-			metrics.PrometheusRequestCounter("api", "server", middlewares.LogMetricKeys),
 			metrics.PrometheusRequestLatency("api", "server", middlewares.LogMetricKeys),
 		)),
 	}

@@ -1,4 +1,4 @@
-// +build all common unit
+// +build unit
 
 package security_test
 
@@ -30,7 +30,7 @@ func TestCreateAccessToken(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		_, err := security.CreateAccessToken(testCase.User, testCase.Options)
+		_, err := security.CreateAccessToken(testCase.User, "jwtsecret_test", testCase.Options)
 		assert.Nil(t, err, "Should success create otp")
 	}
 }

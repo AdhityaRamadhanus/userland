@@ -1,4 +1,4 @@
-// +build all common unit
+// +build unit
 
 package security_test
 

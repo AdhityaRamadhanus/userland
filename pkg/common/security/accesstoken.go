@@ -2,7 +2,6 @@ package security
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -30,7 +29,7 @@ type AccessTokenOptions struct {
 	CustomClaim map[string]interface{}
 }
 
-func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessToken, error) {
+func CreateAccessToken(user userland.User, jwtSecret string, options AccessTokenOptions) (AccessToken, error) {
 	nowInSeconds := time.Now().Unix()
 
 	// generate value token
@@ -56,7 +55,7 @@ func CreateAccessToken(user userland.User, options AccessTokenOptions) (AccessTo
 	claims["exp"] = expirationEpoch
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := jwtToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := jwtToken.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return AccessToken{}, err
 	}

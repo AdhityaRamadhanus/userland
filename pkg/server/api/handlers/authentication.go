@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/server/api/serializers"
-	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/contextkey"
@@ -22,7 +20,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/service/session"
 	"github.com/asaskevich/govalidator"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type AuthenticationHandler struct {
@@ -109,7 +106,7 @@ func (h AuthenticationHandler) registerUser(res http.ResponseWriter, req *http.R
 	}
 
 	if err = h.AuthenticationService.Register(newUser); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -148,7 +145,7 @@ func (h AuthenticationHandler) requestVerification(res http.ResponseWriter, req 
 	verificationType := requestVerificationRequest.Type
 	verificationRecipient := requestVerificationRequest.Recipient
 	if _, err = h.AuthenticationService.RequestVerification(verificationType, verificationRecipient); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -189,7 +186,7 @@ func (h AuthenticationHandler) verifyAccount(res http.ResponseWriter, req *http.
 	email := verifyAccountRequest.Email
 	code := verifyAccountRequest.Code
 	if err = h.AuthenticationService.VerifyAccount(verificationID, email, code); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -230,13 +227,13 @@ func (h AuthenticationHandler) login(res http.ResponseWriter, req *http.Request)
 	password := loginRequest.Password
 	user, err := h.ProfileService.ProfileByEmail(email)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
 	requireTFA, accessToken, err := h.AuthenticationService.Login(email, password)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -289,7 +286,7 @@ func (h AuthenticationHandler) forgotPassword(res http.ResponseWriter, req *http
 
 	email := forgotPasswordRequest.Email
 	if _, err = h.AuthenticationService.ForgotPassword(email); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -340,7 +337,7 @@ func (h AuthenticationHandler) resetPassword(res http.ResponseWriter, req *http.
 	resetToken := resetPasswordRequest.Token
 	newPassword := resetPasswordRequest.Password
 	if err = h.AuthenticationService.ResetPassword(resetToken, newPassword); err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -382,7 +379,7 @@ func (h AuthenticationHandler) verifyTFA(res http.ResponseWriter, req *http.Requ
 
 	accessToken, err := h.AuthenticationService.VerifyTFA(tfaAccessTokenKey, userID, verifyTFARequest.Code)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -435,7 +432,7 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 
 	accessToken, err := h.AuthenticationService.VerifyTFABypass(tfaAccessTokenKey, userID, verifyTFARequest.Code)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -451,64 +448,4 @@ func (h AuthenticationHandler) verifyTFABypass(res http.ResponseWriter, req *htt
 	render.JSON(res, http.StatusOK, map[string]interface{}{
 		"access_token": serializers.SerializeAccessTokenToJSON(accessToken),
 	})
-}
-
-func (h AuthenticationHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
-	ServiceErrorsHTTPMapping := map[error]struct {
-		HTTPCode int
-		ErrCode  string
-	}{
-		userland.ErrUserNotFound: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrUserNotFound",
-		},
-		authentication.ErrUserRegistered: {
-			HTTPCode: http.StatusBadRequest,
-			ErrCode:  "ErrUserRegistered",
-		},
-		authentication.ErrWrongOTP: {
-			HTTPCode: http.StatusBadRequest,
-			ErrCode:  "ErrWrongOTP",
-		},
-		authentication.ErrWrongPassword: {
-			HTTPCode: http.StatusBadRequest,
-			ErrCode:  "ErrWrongPassword",
-		},
-		authentication.ErrUserNotVerified: {
-			HTTPCode: http.StatusBadRequest,
-			ErrCode:  "ErrUserNotVerified",
-		},
-		authentication.ErrOTPInvalid: {
-			HTTPCode: http.StatusBadRequest,
-			ErrCode:  "ErrOTPInvalid",
-		},
-	}
-
-	errorMapping, isErrorMapped := ServiceErrorsHTTPMapping[err]
-	if isErrorMapped {
-		render.JSON(res, errorMapping.HTTPCode, map[string]interface{}{
-			"status": errorMapping.HTTPCode,
-			"error": map[string]interface{}{
-				"code":    errorMapping.ErrCode,
-				"message": err.Error(),
-			},
-		})
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
-		"endpoint":     req.URL.Path,
-		"client":       req.Header.Get("X-API-ClientID"),
-		"x-request-id": req.Header.Get("X-Request-ID"),
-	}).WithError(err).Error("Error Authentication Handler")
-
-	render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-		"status": http.StatusInternalServerError,
-		"error": map[string]interface{}{
-			"code":    "ErrInternalServer",
-			"message": "userland api unable to process the request",
-		},
-	})
-	return
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/go-errors/errors"
 
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/AdhityaRamadhanus/userland"
@@ -29,7 +28,7 @@ func parseAuthorizationHeader(authHeader, scheme string) (cred string, err error
 }
 
 //Authenticate request
-func TokenAuth(keyValueService userland.KeyValueService) Middleware {
+func TokenAuth(keyValueService userland.KeyValueService, jwtSecret string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			authHeader, ok := req.Header["Authorization"]
@@ -72,7 +71,8 @@ func TokenAuth(keyValueService userland.KeyValueService) Middleware {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, errors.New("Unexpected signing method")
 				}
-				return []byte(os.Getenv("JWT_SECRET")), nil
+				// TODO move to config
+				return []byte(jwtSecret), nil
 			})
 			if err != nil {
 				render.JSON(res, http.StatusUnauthorized, map[string]interface{}{

@@ -22,6 +22,7 @@ import (
 )
 
 func TestProfileHandler(t *testing.T) {
+	t.Skip()
 	profileService := profile.SimpleProfileService{CalledMethods: map[string]bool{}}
 	eventService := event.SimpleEventService{CalledMethods: map[string]bool{}}
 

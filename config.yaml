@@ -1,4 +1,5 @@
 env: "development"
+jwt_secret: "test"
 api:
   port: 8080
   host: "localhost"

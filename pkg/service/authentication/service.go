@@ -7,6 +7,7 @@ import (
 	mailing "github.com/AdhityaRamadhanus/userland/pkg/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/keygenerator"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
+	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -54,6 +55,12 @@ func WithMailingClient(mailingClient mailing.Client) func(service *service) {
 	}
 }
 
+func WithConfiguration(cfg *config.Configuration) func(service *service) {
+	return func(service *service) {
+		service.config = cfg
+	}
+}
+
 func NewService(options ...func(*service)) Service {
 	service := &service{}
 	for _, option := range options {
@@ -64,6 +71,7 @@ func NewService(options ...func(*service)) Service {
 }
 
 type service struct {
+	config          *config.Configuration
 	mailingClient   mailing.Client
 	userRepository  userland.UserRepository
 	keyValueService userland.KeyValueService
@@ -138,7 +146,7 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 		return security.AccessToken{}, err
 	}
 
-	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
+	accessToken, err = security.CreateAccessToken(user, s.config.JWTSecret, security.AccessTokenOptions{
 		Expiration: security.TFATokenExpiration,
 		Scope:      security.TFATokenScope,
 	})
@@ -160,7 +168,7 @@ func (s service) loginWithTFA(user userland.User) (accessToken security.AccessTo
 }
 
 func (s service) loginNormal(user userland.User) (accessToken security.AccessToken, err error) {
-	accessToken, err = security.CreateAccessToken(user, security.AccessTokenOptions{
+	accessToken, err = security.CreateAccessToken(user, s.config.JWTSecret, security.AccessTokenOptions{
 		Expiration: security.UserAccessTokenExpiration,
 		Scope:      security.UserTokenScope,
 	})

@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/server/api/serializers"
-	"github.com/go-errors/errors"
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/contextkey"
@@ -15,7 +13,6 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/service/profile"
 	"github.com/AdhityaRamadhanus/userland/pkg/service/session"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type SessionHandler struct {
@@ -51,7 +48,7 @@ func (h SessionHandler) listSession(res http.ResponseWriter, req *http.Request) 
 
 	sessions, err := h.SessionService.ListSession(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -65,7 +62,7 @@ func (h SessionHandler) endCurrentSession(res http.ResponseWriter, req *http.Req
 
 	err := h.SessionService.EndSession(userID, accessTokenKey)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -79,7 +76,7 @@ func (h SessionHandler) endOtherSession(res http.ResponseWriter, req *http.Reque
 
 	err := h.SessionService.EndOtherSessions(userID, accessTokenKey)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -93,13 +90,13 @@ func (h SessionHandler) createRefreshToken(res http.ResponseWriter, req *http.Re
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
 	refreshToken, err := h.SessionService.CreateRefreshToken(user, accessTokenKey)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
@@ -117,14 +114,14 @@ func (h SessionHandler) createNewAccessToken(res http.ResponseWriter, req *http.
 
 	user, err := h.ProfileService.Profile(userID)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 
 	// create access token
 	accessToken, err := h.SessionService.CreateNewAccessToken(user, refreshTokenKey)
 	if err != nil {
-		h.handleServiceError(res, req, err)
+		handleServiceError(res, req, err)
 		return
 	}
 	// create session
@@ -154,44 +151,4 @@ func serializeSessions(sessions userland.Sessions, currentSessionID string) []ma
 	}
 
 	return serializedSessions
-}
-
-func (h SessionHandler) handleServiceError(res http.ResponseWriter, req *http.Request, err error) {
-	ServiceErrorsHTTPMapping := map[error]struct {
-		HTTPCode int
-		ErrCode  string
-	}{
-		userland.ErrUserNotFound: {
-			HTTPCode: http.StatusNotFound,
-			ErrCode:  "ErrUserNotFound",
-		},
-	}
-
-	errorMapping, isErrorMapped := ServiceErrorsHTTPMapping[err]
-	if isErrorMapped {
-		render.JSON(res, errorMapping.HTTPCode, map[string]interface{}{
-			"status": errorMapping.HTTPCode,
-			"error": map[string]interface{}{
-				"code":    errorMapping.ErrCode,
-				"message": err.Error(),
-			},
-		})
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"stack_trace":  fmt.Sprintf("%v", err.(*errors.Error).ErrorStack()),
-		"endpoint":     req.URL.Path,
-		"client":       req.Header.Get("X-API-ClientID"),
-		"x-request-id": req.Header.Get("X-Request-ID"),
-	}).WithError(err).Error("Error Session Handler")
-
-	render.JSON(res, http.StatusInternalServerError, map[string]interface{}{
-		"status": http.StatusInternalServerError,
-		"error": map[string]interface{}{
-			"code":    "ErrInternalServer",
-			"message": "userland api unable to process the request",
-		},
-	})
-	return
 }

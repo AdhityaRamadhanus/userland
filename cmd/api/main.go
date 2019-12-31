@@ -92,6 +92,7 @@ func main() {
 
 	// services
 	authSvc := authentication.NewService(
+		authentication.WithConfiguration(cfg),
 		authentication.WithKeyValueService(keyValueSvc),
 		authentication.WithMailingClient(mailClient),
 		authentication.WithUserRepository(userRepository),
@@ -105,10 +106,10 @@ func main() {
 		profile.WithUserRepository(userRepository),
 	)
 
-	sessionSvc := session.NewService(session.WithKeyValueService(keyValueSvc), session.WithSessionRepository(sessionRepository))
+	sessionSvc := session.NewService(session.WithConfiguration(cfg), session.WithKeyValueService(keyValueSvc), session.WithSessionRepository(sessionRepository))
 	eventSvc := event.NewService(event.WithEventRepository(eventRepository))
 
-	authenticator := middlewares.TokenAuth(keyValueSvc)
+	authenticator := middlewares.TokenAuth(keyValueSvc, cfg.JWTSecret)
 	ratelimiter := middlewares.RateLimit(redisRateClient)
 
 	healthHandler := handlers.HealthzHandler{}

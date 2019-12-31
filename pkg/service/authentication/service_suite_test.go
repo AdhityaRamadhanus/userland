@@ -58,6 +58,7 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	suite.KeyValueService = redis.NewKeyValueService(redisClient)
 	suite.UserRepository = postgres.NewUserRepository(pgConn)
 	suite.AuthenticationService = authentication.NewService(
+		authentication.WithConfiguration(suite.Config),
 		authentication.WithKeyValueService(suite.KeyValueService),
 		authentication.WithMailingClient(mailing.NewMailingClient("")),
 		authentication.WithUserRepository(suite.UserRepository),
