@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/go-errors/errors"
-
 	"github.com/gocraft/work"
 	mailjet "github.com/mailjet/mailjet-apiv3-go"
 	log "github.com/sirupsen/logrus"

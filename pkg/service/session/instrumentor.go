@@ -13,16 +13,14 @@ var (
 )
 
 type instrumentorService struct {
-	requestCount   metrics.Counter
 	requestLatency metrics.Histogram
 	next           Service
 }
 
 //Service provide an interface to story domain service
 
-func NewInstrumentorService(counter metrics.Counter, latency metrics.Histogram, s Service) Service {
+func NewInstrumentorService(latency metrics.Histogram, s Service) Service {
 	service := &instrumentorService{
-		requestCount:   counter,
 		requestLatency: latency,
 		next:           s,
 	}
@@ -32,7 +30,6 @@ func NewInstrumentorService(counter metrics.Counter, latency metrics.Histogram, 
 
 func (s instrumentorService) CreateSession(userID int, session userland.Session) error {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "CreateSession").Add(1)
 		s.requestLatency.With("method", "CreateSession").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
@@ -41,7 +38,6 @@ func (s instrumentorService) CreateSession(userID int, session userland.Session)
 
 func (s instrumentorService) ListSession(userID int) (userland.Sessions, error) {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "ListSession").Add(1)
 		s.requestLatency.With("method", "ListSession").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
@@ -50,7 +46,6 @@ func (s instrumentorService) ListSession(userID int) (userland.Sessions, error) 
 
 func (s instrumentorService) EndSession(userID int, currentSessionID string) error {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "EndSession").Add(1)
 		s.requestLatency.With("method", "EndSession").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
@@ -59,7 +54,6 @@ func (s instrumentorService) EndSession(userID int, currentSessionID string) err
 
 func (s instrumentorService) EndOtherSessions(userID int, currentSessionID string) error {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "EndOtherSessions").Add(1)
 		s.requestLatency.With("method", "EndOtherSessions").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
@@ -68,7 +62,6 @@ func (s instrumentorService) EndOtherSessions(userID int, currentSessionID strin
 
 func (s instrumentorService) CreateRefreshToken(user userland.User, currentSessionID string) (security.AccessToken, error) {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "CreateRefreshToken").Add(1)
 		s.requestLatency.With("method", "CreateRefreshToken").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
@@ -77,7 +70,6 @@ func (s instrumentorService) CreateRefreshToken(user userland.User, currentSessi
 
 func (s instrumentorService) CreateNewAccessToken(user userland.User, refreshTokenID string) (security.AccessToken, error) {
 	defer func(begin time.Time) {
-		s.requestCount.With("method", "CreateNewAccessToken").Add(1)
 		s.requestLatency.With("method", "CreateNewAccessToken").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 

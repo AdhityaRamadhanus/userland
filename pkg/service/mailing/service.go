@@ -3,11 +3,9 @@ package mailing
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/gocraft/work"
-	"github.com/go-errors/errors"
-
+	"github.com/pkg/errors"
 )
 
 type MailAddress struct {
@@ -24,7 +22,9 @@ type SendEmailOption struct {
 }
 
 type service struct {
-	producer *work.Enqueuer
+	queueName   string
+	emailSender string
+	producer    *work.Enqueuer
 }
 
 type Service interface {
@@ -32,24 +32,19 @@ type Service interface {
 	SendVerificationEmail(recipient MailAddress, verificationLink string) error
 }
 
-func NewService(enqueuer *work.Enqueuer) Service {
+func NewService(queueName, emailSender string, enqueuer *work.Enqueuer) Service {
 	return &service{
-		producer: enqueuer,
+		queueName:   queueName,
+		emailSender: emailSender,
+		producer:    enqueuer,
 	}
 }
 
-func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
-	queueName := os.Getenv("EMAIL_QUEUE")
+func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string) error {
 	opts := SendEmailOption{
 		From: MailAddress{
 			Name:    "OTP Email from Userland",
-			Address: os.Getenv("EMAIL_SENDER"),
+			Address: s.emailSender,
 		},
 		To: []MailAddress{
 			{
@@ -68,25 +63,24 @@ func (s service) SendOTPEmail(recipient MailAddress, otpType string, otp string)
 
 	// convert struct to json
 	work := work.Q{}
-	jsonBytes, _ := json.Marshal(opts)
+	jsonBytes, err := json.Marshal(opts)
+	if err != nil {
+		return errors.Wrap(err, "json.Marshal() err")
+	}
 	json.Unmarshal(jsonBytes, &work)
 
-	_, err = s.producer.Enqueue(queueName, work)
-	return err
+	if _, err := s.producer.Enqueue(s.queueName, work); err != nil {
+		return errors.Wrap(err, "producer.Enqueue() err")
+	}
+
+	return nil
 }
 
 func (s service) SendVerificationEmail(recipient MailAddress, verificationLink string) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Wrap(err, 0)
-		}
-	}()
-
-	queueName := os.Getenv("EMAIL_QUEUE")
 	opts := SendEmailOption{
 		From: MailAddress{
 			Name:    "Verification Email from Userland",
-			Address: os.Getenv("EMAIL_SENDER"),
+			Address: s.emailSender,
 		},
 		To: []MailAddress{
 			{
@@ -103,10 +97,17 @@ func (s service) SendVerificationEmail(recipient MailAddress, verificationLink s
 	}
 
 	// convert struct to json
+	// convert struct to json
 	work := work.Q{}
-	jsonBytes, _ := json.Marshal(opts)
+	jsonBytes, err := json.Marshal(opts)
+	if err != nil {
+		return errors.Wrap(err, "json.Marshal() err")
+	}
 	json.Unmarshal(jsonBytes, &work)
 
-	_, err = s.producer.Enqueue(queueName, work)
-	return err
+	if _, err := s.producer.Enqueue(s.queueName, work); err != nil {
+		return errors.Wrap(err, "producer.Enqueue() err")
+	}
+
+	return nil
 }

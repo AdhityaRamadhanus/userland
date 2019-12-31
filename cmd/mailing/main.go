@@ -72,7 +72,7 @@ func main() {
 
 	mailjetClient := mailjet.NewMailjetClient(cfg.Mailjet.PublicKey, cfg.Mailjet.PrivateKey)
 	mailingWorker := mailing.NewWorker(mailjetClient)
-	mailingService := mailing.NewService(enqueuer)
+	mailingService := mailing.NewService(cfg.Mail.Queue, cfg.Mail.Sender, enqueuer)
 
 	basicAuthenticator := middlewares.BasicAuth(cfg.Mail.AuthUser, cfg.Mail.AuthPassword)
 	healthHandler := handlers.HealthzHandler{}

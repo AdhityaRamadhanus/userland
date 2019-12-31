@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	_http "github.com/AdhityaRamadhanus/userland/pkg/common/http"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/clients/mailing"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/middlewares"
 	"github.com/AdhityaRamadhanus/userland/pkg/config"
@@ -79,8 +80,9 @@ func main() {
 		logrus.Fatalf("(GCS) storage.NewClient(ctx) err = %v", err)
 	}
 
+	mailHTTPClient := _http.NewInstrumentedClient("mailing", _http.WithClientTimeout(5*time.Second))
 	// mailing Client
-	mailClient := mailing.NewMailingClient(cfg.Mail.Host, mailing.WithClientTimeout(5*time.Second), mailing.WithBasicAuth(cfg.Mail.AuthUser, cfg.Mail.AuthPassword))
+	mailClient := mailing.NewMailingClient(cfg.Mail.Host, mailing.WithHTTPClient(mailHTTPClient), mailing.WithBasicAuth(cfg.Mail.AuthUser, cfg.Mail.AuthPassword))
 	// repositories
 	userRepository := postgres.NewUserRepository(pgConn)
 	eventRepository := postgres.NewEventRepository(pgConn)
