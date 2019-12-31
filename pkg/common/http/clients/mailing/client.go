@@ -10,6 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ErrSendEmailFailed = errors.New("Failed to send email")
+)
+
 type Client interface {
 	SendOTPEmail(recipientAddress string, recipientName string, otpType string, otp string) error
 	SendVerificationEmail(recipientAddress string, recipientName string, verificationLink string) error
@@ -69,12 +73,12 @@ func (c client) SendOTPEmail(recipientAddress string, recipientName string, otpT
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "httpClient.Do() err")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("Failed to send OTP Email")
+		return errors.Wrapf(ErrSendEmailFailed, "%s return status code = %d", url, resp.StatusCode)
 	}
 
 	return nil
@@ -88,21 +92,25 @@ func (c client) SendVerificationEmail(recipientAddress string, recipientName str
 		"recipient_name":    recipientName,
 		"verification_link": verificationLink,
 	}
-	jsonBytes, _ := json.Marshal(requestBody)
+	jsonBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return errors.Wrapf(err, "json.Marshal() err")
+	}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return errors.Wrapf(err, "http.NewRequest() err")
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(c.username, c.password)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "httpClient.Do() err")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var decodedResponse map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&decodedResponse)
-		return errors.New(fmt.Sprintf("Failed to send Verification Email reponse code %d, paload %v", resp.StatusCode, decodedResponse))
+		return errors.Wrapf(ErrSendEmailFailed, "%s return status code = %d", url, resp.StatusCode)
 	}
 
 	return nil
