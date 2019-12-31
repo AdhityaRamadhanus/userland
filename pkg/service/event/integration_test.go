@@ -42,4 +42,5 @@ func TestMain(m *testing.M) {
 func TestEventService(t *testing.T) {
 	suiteTest := NewEventServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

@@ -40,6 +40,12 @@ func NewAuthenticationServiceTestSuite(cfg *config.Configuration) *Authenticatio
 	}
 }
 
+func (suite *AuthenticationServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown AuthenticationServiceTestSuite")
+	suite.DB.Close()
+	suite.RedisClient.Close()
+}
+
 // before each test
 func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	suite.T().Log("Connecting to postgres at", suite.Config.Postgres)
@@ -47,6 +53,7 @@ func (suite *AuthenticationServiceTestSuite) SetupSuite() {
 	if err != nil {
 		suite.T().Fatalf("postgres.CreateConnection() err = %v", err)
 	}
+
 	suite.T().Log("Connecting to redis at", suite.Config.Redis)
 	redisClient, err := redis.CreateClient(suite.Config.Redis, 0)
 	if err != nil {

@@ -65,15 +65,21 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("postgres.CreateConnection() err = %v", err)
 	}
+	defer pgConn.Close()
+
 	logrus.Debug("Connecting to redis at", cfg.Redis)
 	redisClient, err := redis.CreateClient(cfg.Redis, 0)
 	if err != nil {
 		logrus.Fatalf("redis.CreateClient(cfg, 0) err = %v", err)
 	}
+	defer redisClient.Close()
+
 	redisRateClient, err := redis.CreateClient(cfg.Redis, 1)
 	if err != nil {
 		logrus.Fatalf("redis.CreateClient(cfg, 1) err = %v", err)
 	}
+	defer redisRateClient.Close()
+
 	ctx := context.Background()
 	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {

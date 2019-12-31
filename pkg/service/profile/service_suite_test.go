@@ -36,6 +36,12 @@ func NewProfileServiceTestSuite(cfg *config.Configuration) *ProfileServiceTestSu
 	}
 }
 
+func (suite *ProfileServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown ProfileServiceTestSuite")
+	suite.RedisClient.Close()
+	suite.DB.Close()
+}
+
 func (suite *ProfileServiceTestSuite) SetupSuite() {
 	suite.T().Log("Connecting to postgres at", suite.Config.Postgres)
 	pgConn, err := postgres.CreateConnection(suite.Config.Postgres)

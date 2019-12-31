@@ -30,6 +30,11 @@ func NewEventServiceTestSuite(cfg *config.Configuration) *EventServiceTestSuite 
 	}
 }
 
+func (suite *EventServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown EventServiceTestSuite")
+	suite.DB.Close()
+}
+
 // before each test
 func (suite *EventServiceTestSuite) SetupSuite() {
 	suite.T().Log("Connecting to postgres at", suite.Config.Postgres)

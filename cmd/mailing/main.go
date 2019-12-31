@@ -68,6 +68,7 @@ func main() {
 			)
 		},
 	}
+	defer redisPool.Close()
 	enqueuer := work.NewEnqueuer(cfg.Mail.WorkerSpace, redisPool)
 
 	mailjetClient := mailjet.NewMailjetClient(cfg.Mailjet.PublicKey, cfg.Mailjet.PrivateKey)

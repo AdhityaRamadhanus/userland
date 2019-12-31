@@ -29,6 +29,11 @@ func NewMailingServiceTestSuite(cfg *config.Configuration) *MailingServiceTestSu
 	}
 }
 
+func (suite *MailingServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown MailingServiceTestSuite")
+	suite.RedisPool.Close()
+}
+
 // before each test
 func (suite *MailingServiceTestSuite) SetupSuite() {
 	redisAddr := fmt.Sprintf("%s:%d", suite.Config.Redis.Host, suite.Config.Redis.Port)
@@ -46,6 +51,7 @@ func (suite *MailingServiceTestSuite) SetupSuite() {
 		},
 	}
 
+	suite.RedisPool = redisPool
 	suite.Enqueuer = work.NewEnqueuer(suite.Config.Mail.WorkerSpace, redisPool)
 	suite.MailingService = mailing.NewService(suite.Config.Mail.Queue, suite.Config.Mail.Sender, suite.Enqueuer)
 	suite.MailingService = mailing.NewInstrumentorService(metrics.PrometheusRequestLatency("service", "mailing", mailing.MetricKeys), suite.MailingService)

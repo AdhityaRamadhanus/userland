@@ -10,8 +10,8 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
 	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/redis"
-	"github.com/stretchr/testify/suite"
 	_redis "github.com/go-redis/redis"
+	"github.com/stretchr/testify/suite"
 )
 
 type SessionRepositoryTestSuite struct {
@@ -25,6 +25,11 @@ func NewSessionRepositoryTestSuite(cfg *config.Configuration) *SessionRepository
 	return &SessionRepositoryTestSuite{
 		Config: cfg,
 	}
+}
+
+func (suite *SessionRepositoryTestSuite) Teardown() {
+	suite.T().Log("Teardown SessionRepositoryTestSuite")
+	suite.RedisClient.Close()
 }
 
 func (suite *SessionRepositoryTestSuite) SetupTest() {
@@ -200,7 +205,7 @@ func (suite *SessionRepositoryTestSuite) TestDeleteExpiredSessions() {
 
 func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 	type args struct {
-		userID int
+		userID    int
 		sessionID string
 	}
 	testCases := []struct {
@@ -210,14 +215,14 @@ func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 		{
 			name: "success",
 			args: args{
-				userID: 1,
+				userID:    1,
 				sessionID: security.GenerateUUID(),
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		suite.T().Run(tc.name, func (t *testing.T) {
+		suite.T().Run(tc.name, func(t *testing.T) {
 			suite.SessionRepository.Create(tc.args.userID, userland.Session{
 				ID:         tc.args.sessionID,
 				Token:      "test",
@@ -226,7 +231,7 @@ func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 				ClientName: "test",
 				Expiration: security.UserAccessTokenExpiration,
 			})
-	
+
 			err := suite.SessionRepository.DeleteBySessionID(tc.args.userID, tc.args.sessionID)
 			if err != nil {
 				t.Fatalf("SessionRepository.DeleteBySessionID(%d, %s) err = %v; want nil", tc.args.userID, tc.args.sessionID, err)
@@ -247,7 +252,7 @@ func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 
 func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 	type args struct {
-		userID int
+		userID     int
 		sessionIDs []string
 	}
 	testCases := []struct {
@@ -268,7 +273,7 @@ func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 	}
 
 	for _, tc := range testCases {
-		suite.T().Run(tc.name, func (t *testing.T) {
+		suite.T().Run(tc.name, func(t *testing.T) {
 			for _, sessionID := range tc.args.sessionIDs {
 				suite.SessionRepository.Create(tc.args.userID, userland.Session{
 					ID:         sessionID,
@@ -277,9 +282,9 @@ func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 					ClientID:   1,
 					ClientName: "test",
 					Expiration: security.UserAccessTokenExpiration,
-				})	
+				})
 			}
-	
+
 			// just pick the first session ID
 			keepSessionID := tc.args.sessionIDs[0]
 			_, err := suite.SessionRepository.DeleteOtherSessions(tc.args.userID, keepSessionID)

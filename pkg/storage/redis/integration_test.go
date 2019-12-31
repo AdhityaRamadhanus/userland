@@ -42,9 +42,11 @@ func TestMain(m *testing.M) {
 func TestKeyValueService(t *testing.T) {
 	suiteTest := NewKeyValueServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }
 
 func TestSessionRepository(t *testing.T) {
 	suiteTest := NewSessionRepositoryTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

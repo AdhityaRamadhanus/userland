@@ -27,6 +27,11 @@ func NewEventRepositoryTestSuite(cfg *config.Configuration) *EventRepositoryTest
 	}
 }
 
+func (suite *EventRepositoryTestSuite) Teardown() {
+	suite.T().Log("Teardown EventRepositoryTestSuite")
+	suite.DB.Close()
+}
+
 func (suite *EventRepositoryTestSuite) SetupSuite() {
 	suite.T().Log("Connecting to postgres at", suite.Config.Postgres)
 	pgConn, err := postgres.CreateConnection(suite.Config.Postgres)

@@ -42,4 +42,5 @@ func TestMain(m *testing.M) {
 func TestSessionService(t *testing.T) {
 	suiteTest := NewSessionServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

@@ -42,9 +42,11 @@ func TestMain(m *testing.M) {
 func TestUserRepository(t *testing.T) {
 	suiteTest := NewUserRepositoryTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }
 
 func TestEventRepository(t *testing.T) {
 	suiteTest := NewEventRepositoryTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

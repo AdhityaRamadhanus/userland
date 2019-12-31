@@ -42,4 +42,5 @@ func TestMain(m *testing.M) {
 func TestProfileService(t *testing.T) {
 	suiteTest := NewProfileServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

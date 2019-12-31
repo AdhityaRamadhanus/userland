@@ -42,4 +42,5 @@ func TestMain(m *testing.M) {
 func TestAuthenticationService(t *testing.T) {
 	suiteTest := NewAuthenticationServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

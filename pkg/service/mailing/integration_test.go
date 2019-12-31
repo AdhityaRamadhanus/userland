@@ -42,4 +42,5 @@ func TestMain(m *testing.M) {
 func TestMailingService(t *testing.T) {
 	suiteTest := NewMailingServiceTestSuite(cfg)
 	suite.Run(t, suiteTest)
+	suiteTest.Teardown()
 }

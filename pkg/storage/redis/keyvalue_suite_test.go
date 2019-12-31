@@ -26,6 +26,11 @@ func NewKeyValueServiceTestSuite(cfg *config.Configuration) *KeyValueServiceTest
 	}
 }
 
+func (suite *KeyValueServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown KeyValueServiceTestSuite")
+	suite.RedisClient.Close()
+}
+
 func (suite *KeyValueServiceTestSuite) SetupTest() {
 	if err := suite.RedisClient.FlushAll().Err(); err != nil {
 		suite.T().Fatalf("RedisClient.FlushAll() err = %v; want nil", err)

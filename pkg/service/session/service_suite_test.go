@@ -33,6 +33,11 @@ func NewSessionServiceTestSuite(cfg *config.Configuration) *SessionServiceTestSu
 	}
 }
 
+func (suite *SessionServiceTestSuite) Teardown() {
+	suite.T().Log("Teardown SessionServiceTestSuite")
+	suite.RedisClient.Close()
+}
+
 // before each test
 func (suite SessionServiceTestSuite) SetupTest() {
 	if err := suite.RedisClient.FlushAll().Err(); err != nil {
