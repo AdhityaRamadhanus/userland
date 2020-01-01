@@ -10,6 +10,7 @@ import (
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
 	"github.com/AdhityaRamadhanus/userland/pkg/config"
 	"github.com/AdhityaRamadhanus/userland/pkg/storage/redis"
+	"github.com/AdhityaRamadhanus/userland/pkg/userlandtest"
 	_redis "github.com/go-redis/redis"
 	"github.com/stretchr/testify/suite"
 )
@@ -91,8 +92,8 @@ func (suite *SessionRepositoryTestSuite) TestCreate() {
 
 func (suite *SessionRepositoryTestSuite) TestFindAllByUserID() {
 	type args struct {
-		userID             int
-		createSessionCount int
+		userID       int
+		sessionCount int
 	}
 	testCases := []struct {
 		name      string
@@ -102,16 +103,16 @@ func (suite *SessionRepositoryTestSuite) TestFindAllByUserID() {
 		{
 			name: "return 1",
 			args: args{
-				userID:             1,
-				createSessionCount: 2,
+				userID:       1,
+				sessionCount: 2,
 			},
 			wantCount: 2,
 		},
 		{
 			name: "return 0",
 			args: args{
-				userID:             2,
-				createSessionCount: 0,
+				userID:       2,
+				sessionCount: 0,
 			},
 			wantCount: 0,
 		},
@@ -120,16 +121,7 @@ func (suite *SessionRepositoryTestSuite) TestFindAllByUserID() {
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			// setup
-			for i := 0; i < tc.args.createSessionCount; i++ {
-				suite.SessionRepository.Create(tc.args.userID, userland.Session{
-					ID:         security.GenerateUUID(),
-					Token:      "test",
-					IP:         "123.123.13.123",
-					ClientID:   1,
-					ClientName: "test",
-					Expiration: security.UserAccessTokenExpiration,
-				})
-			}
+			userlandtest.TestCreateSessions(t, suite.SessionRepository, userlandtest.WithNumberOfSessions(tc.args.sessionCount))
 			sessions, err := suite.SessionRepository.FindAllByUserID(tc.args.userID)
 			if err != nil {
 				t.Fatalf("SessionRepository.FindAllByUserID(%d) err = %v; want nil", tc.args.userID, err)
@@ -145,9 +137,9 @@ func (suite *SessionRepositoryTestSuite) TestFindAllByUserID() {
 
 func (suite *SessionRepositoryTestSuite) TestDeleteExpiredSessions() {
 	type args struct {
-		userID                    int
-		createSessionCount        int
-		createExpiredSessionCount int
+		userID            int
+		longSessionCount  int
+		shortSessionCount int
 	}
 	testCases := []struct {
 		name      string
@@ -155,38 +147,35 @@ func (suite *SessionRepositoryTestSuite) TestDeleteExpiredSessions() {
 		wantCount int
 	}{
 		{
-			name: "create 2, expired 1, should return 1",
+			name: "create 3, expired 1, should return 2",
 			args: args{
-				userID:                    1,
-				createSessionCount:        2,
-				createExpiredSessionCount: 1,
+				userID:            1,
+				longSessionCount:  2,
+				shortSessionCount: 1,
 			},
-			wantCount: 1,
+			wantCount: 2,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			// setup
-			sessionExpiration := 100 * time.Millisecond
-			expiredSessionCount := tc.args.createExpiredSessionCount
-			for i := 0; i < tc.args.createSessionCount; i++ {
-				exp := sessionExpiration
-				if expiredSessionCount <= 0 {
-					exp += 100 * time.Second
-				}
-				suite.SessionRepository.Create(tc.args.userID, userland.Session{
-					ID:         security.GenerateUUID(),
-					Token:      "test",
-					IP:         "123.123.13.123",
-					ClientID:   1,
-					ClientName: "test",
-					Expiration: exp,
-				})
-				expiredSessionCount--
-			}
-
-			time.Sleep(2 * sessionExpiration)
+			shortExp := 100 * time.Millisecond
+			longExp := 100 * time.Second
+			shortSessions := userlandtest.TestCreateSessions(t, suite.SessionRepository,
+				userlandtest.WithUserID(tc.args.userID),
+				userlandtest.WithNumberOfSessions(tc.args.shortSessionCount),
+				userlandtest.WithExpiration(shortExp),
+			)
+			longSessions := userlandtest.TestCreateSessions(t, suite.SessionRepository,
+				userlandtest.WithUserID(tc.args.userID),
+				userlandtest.WithNumberOfSessions(tc.args.longSessionCount),
+				userlandtest.WithExpiration(longExp),
+			)
+			_ = shortSessions
+			_ = longSessions
+			// wait till short sessions expired
+			time.Sleep(2 * shortExp)
 			if err := suite.SessionRepository.DeleteExpiredSessions(tc.args.userID); err != nil {
 				t.Fatalf("SessionRepository.DeleteExpiredSessions(%d) err = %v; want nil", tc.args.userID, err)
 			}
@@ -205,8 +194,7 @@ func (suite *SessionRepositoryTestSuite) TestDeleteExpiredSessions() {
 
 func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 	type args struct {
-		userID    int
-		sessionID string
+		userID int
 	}
 	testCases := []struct {
 		name string
@@ -215,26 +203,17 @@ func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 		{
 			name: "success",
 			args: args{
-				userID:    1,
-				sessionID: security.GenerateUUID(),
+				userID: 1,
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			suite.SessionRepository.Create(tc.args.userID, userland.Session{
-				ID:         tc.args.sessionID,
-				Token:      "test",
-				IP:         "123.123.13.123",
-				ClientID:   1,
-				ClientName: "test",
-				Expiration: security.UserAccessTokenExpiration,
-			})
-
-			err := suite.SessionRepository.DeleteBySessionID(tc.args.userID, tc.args.sessionID)
+			session := userlandtest.TestCreateSession(t, suite.SessionRepository, userlandtest.WithUserID(tc.args.userID))
+			err := suite.SessionRepository.DeleteBySessionID(tc.args.userID, session.ID)
 			if err != nil {
-				t.Fatalf("SessionRepository.DeleteBySessionID(%d, %s) err = %v; want nil", tc.args.userID, tc.args.sessionID, err)
+				t.Fatalf("SessionRepository.DeleteBySessionID(%d, %s) err = %v; want nil", tc.args.userID, session.ID, err)
 			}
 			sessions, err := suite.SessionRepository.FindAllByUserID(tc.args.userID)
 			if err != nil {
@@ -252,8 +231,8 @@ func (suite *SessionRepositoryTestSuite) TestDeleteBySessionID() {
 
 func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 	type args struct {
-		userID     int
-		sessionIDs []string
+		userID           int
+		numberOfSessions int
 	}
 	testCases := []struct {
 		name string
@@ -262,36 +241,23 @@ func (suite *SessionRepositoryTestSuite) TestDeleteOtherSessions() {
 		{
 			name: "success",
 			args: args{
-				userID: 1,
-				sessionIDs: []string{
-					security.GenerateUUID(),
-					security.GenerateUUID(),
-					security.GenerateUUID(),
-				},
+				userID:           1,
+				numberOfSessions: 3,
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			for _, sessionID := range tc.args.sessionIDs {
-				suite.SessionRepository.Create(tc.args.userID, userland.Session{
-					ID:         sessionID,
-					Token:      "test",
-					IP:         "123.123.13.123",
-					ClientID:   1,
-					ClientName: "test",
-					Expiration: security.UserAccessTokenExpiration,
-				})
-			}
+			sessions := userlandtest.TestCreateSessions(t, suite.SessionRepository, userlandtest.WithNumberOfSessions(tc.args.numberOfSessions))
 
 			// just pick the first session ID
-			keepSessionID := tc.args.sessionIDs[0]
+			keepSessionID := sessions[0].ID
 			_, err := suite.SessionRepository.DeleteOtherSessions(tc.args.userID, keepSessionID)
 			if err != nil {
 				t.Fatalf("SessionRepository.DeleteBySessionID(%d, %s) err = %v; want nil", tc.args.userID, keepSessionID, err)
 			}
-			sessions, err := suite.SessionRepository.FindAllByUserID(tc.args.userID)
+			sessions, err = suite.SessionRepository.FindAllByUserID(tc.args.userID)
 			if err != nil {
 				t.Fatalf("SessionRepository.FindAllByUserID(%d) err = %v; want nil", tc.args.userID, err)
 			}
