@@ -6,43 +6,58 @@ import (
 	"testing"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateOTP(t *testing.T) {
+	type args struct {
+		length int
+	}
 	testCases := []struct {
-		Length      int
-		ExpectError bool
+		name    string
+		args    args
+		wantErr bool
 	}{
 		{
-			Length:      6,
-			ExpectError: false,
+			name: "len=6",
+			args: args{
+				length: 6,
+			},
+			wantErr: false,
 		},
 		{
-			Length:      2,
-			ExpectError: false,
+			name: "len=2",
+			args: args{
+				length: 2,
+			},
+			wantErr: false,
 		},
 		{
-			Length:      4,
-			ExpectError: false,
-		},
-		{
-			Length:      -1,
-			ExpectError: true,
-		},
-		{
-			Length:      10,
-			ExpectError: true,
+			name: "len=-1",
+			args: args{
+				length: -1,
+			},
+			wantErr: true,
 		},
 	}
 
-	for _, testCase := range testCases {
-		code, err := security.GenerateOTP(testCase.Length)
-		if testCase.ExpectError {
-			assert.NotNil(t, err, "Should return error")
-		} else {
-			assert.Nil(t, err, "Should success create otp")
-			assert.Equal(t, len(code), testCase.Length, "otp length is not correct")
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, err := security.GenerateOTP(tc.args.length)
+			if err != nil && !tc.wantErr {
+				t.Fatalf("security.GenerateOTP() err = %v; want nil", err)
+			}
+
+			if err == nil && tc.wantErr {
+				t.Fatal("security.GenerateOTP() err = nil; want not nil", err)
+			}
+
+			if tc.wantErr {
+				return
+			}
+
+			if len(code) != tc.args.length {
+				t.Errorf("security.GenerateOTP() len(code) = %d; want %d", len(code), tc.args.length)
+			}
+		})
 	}
 }

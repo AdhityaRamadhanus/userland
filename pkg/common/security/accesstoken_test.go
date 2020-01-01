@@ -8,29 +8,40 @@ import (
 
 	"github.com/AdhityaRamadhanus/userland"
 	"github.com/AdhityaRamadhanus/userland/pkg/common/security"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateAccessToken(t *testing.T) {
+	type args struct {
+		user userland.User
+		opt  security.AccessTokenOptions
+	}
 	testCases := []struct {
-		User    userland.User
-		Options security.AccessTokenOptions
+		name    string
+		args    args
+		wantErr error
 	}{
 		{
-			User: userland.User{
-				Fullname: "Adhitya Ramadhanus",
-				Email:    "adhitya.ramadhanus@gmail.com",
-				ID:       1,
+			name: "success",
+			args: args{
+				user: userland.User{
+					Fullname: "Adhitya Ramadhanus",
+					Email:    "adhitya.ramadhanus@gmail.com",
+					ID:       1,
+				},
+				opt: security.AccessTokenOptions{
+					Expiration: 60 * time.Second * 5,
+					Scope:      security.UserTokenScope,
+				},
 			},
-			Options: security.AccessTokenOptions{
-				Expiration: 60 * time.Second * 5,
-				Scope:      security.UserTokenScope,
-			},
+			wantErr: nil,
 		},
 	}
 
-	for _, testCase := range testCases {
-		_, err := security.CreateAccessToken(testCase.User, "jwtsecret_test", testCase.Options)
-		assert.Nil(t, err, "Should success create otp")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := security.CreateAccessToken(tc.args.user, "jwtsecret_test", tc.args.opt); err != tc.wantErr {
+				t.Fatalf("security.CreateAccessToken() err = %v; want %v", err, tc.wantErr)
+			}
+		})
 	}
 }

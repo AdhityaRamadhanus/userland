@@ -76,7 +76,7 @@ func (h ProfileHandler) RegisterRoutes(router *mux.Router) {
 	subRouter.Handle("/me/tfa/enroll", activateTFA).Methods("POST")
 	subRouter.Handle("/me/tfa/remove", removeTFA).Methods("POST")
 
-	subRouter.Handle("/me/delete", deleteAccount).Methods("POST")
+	subRouter.Handle("/me/delete", deleteAccount).Methods("DELETE")
 	subRouter.Handle("/me/events", getEvents).Methods("GET")
 }
 

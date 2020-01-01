@@ -3,42 +3,62 @@
 package middlewares_test
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/AdhityaRamadhanus/userland/pkg/common/http/middlewares"
-	"github.com/go-errors/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/pkg/errors"
 )
 
 func TestPanic(t *testing.T) {
-	t.Skip()
+	type args struct {
+		handler http.Handler
+	}
 	testCases := []struct {
-		Handler            http.Handler
-		ExpectedStatusCode int
+		name           string
+		args           args
+		wantStatusCode int
 	}{
 		{
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				panic(errors.New("Panic"))
-			}),
-			ExpectedStatusCode: http.StatusInternalServerError,
+			name: "return panic with pkg errors",
+			args: args{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					panic(errors.New("Panic"))
+				}),
+			},
+			wantStatusCode: http.StatusInternalServerError,
 		},
 		{
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("OK"))
-			}),
-			ExpectedStatusCode: http.StatusOK,
+			name: "return OK",
+			args: args{
+				handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte("OK"))
+				}),
+			},
+			wantStatusCode: http.StatusOK,
 		},
 	}
 
-	for _, testCase := range testCases {
-		ts := httptest.NewServer(middlewares.PanicHandler(testCase.Handler))
-		defer ts.Close()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mw := middlewares.PanicHandler(tc.args.handler)
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
+			if err != nil {
+				t.Fatalf("http.NewRequest() err = %v; want nil", err)
+			}
+			res := httptest.NewRecorder()
+			mw.ServeHTTP(res, req)
 
-		res, err := http.Get(ts.URL)
-		assert.Nil(t, err)
-		assert.Equal(t, res.StatusCode, testCase.ExpectedStatusCode)
+			statusCode := res.Result().StatusCode
+			if statusCode != tc.wantStatusCode {
+				body, _ := ioutil.ReadAll(res.Result().Body)
+				defer res.Result().Body.Close()
+				t.Logf("response %s\n", string(body))
+				t.Errorf("middlewares.PanicHandler() res.StatusCode = %d; want %d", statusCode, tc.wantStatusCode)
+			}
+		})
 	}
 }

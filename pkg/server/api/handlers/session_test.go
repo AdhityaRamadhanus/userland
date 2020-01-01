@@ -11,20 +11,27 @@ import (
 
 	_http "github.com/AdhityaRamadhanus/userland/pkg/common/http"
 	"github.com/AdhityaRamadhanus/userland/pkg/mocks/middlewares"
-	"github.com/AdhityaRamadhanus/userland/pkg/mocks/service/mailing"
-	"github.com/AdhityaRamadhanus/userland/pkg/server/mailing/handlers"
+	"github.com/AdhityaRamadhanus/userland/pkg/mocks/service/profile"
+	"github.com/AdhityaRamadhanus/userland/pkg/mocks/service/session"
+	"github.com/AdhityaRamadhanus/userland/pkg/server/api/handlers"
 	"github.com/gorilla/mux"
 )
 
-func TestMailingHandler(t *testing.T) {
-	mailingService := mailing.SimpleMailingService{CalledMethods: map[string]bool{}}
+func TestSessionHandler_inputValidation(t *testing.T) {
+	profileService := profile.SimpleProfileService{CalledMethods: map[string]bool{}}
+	sessionService := session.SimpleSessionService{CalledMethods: map[string]bool{}}
 
-	mailingHandler := handlers.MailingHandler{
-		Authenticator:  middlewares.Bypass,
-		MailingService: mailingService,
+	tokenClaims := map[string]interface{}{
+		"previous_session_id": "test",
+	}
+	sessionHandler := handlers.SessionHandler{
+		Authorization:  middlewares.BypassWithArgs,
+		Authenticator:  middlewares.AuthenticationWithCustomClaims(tokenClaims),
+		ProfileService: profileService,
+		SessionService: sessionService,
 	}
 	router := mux.NewRouter().StrictSlash(true)
-	mailingHandler.RegisterRoutes(router)
+	sessionHandler.RegisterRoutes(router)
 
 	ts := httptest.NewServer(middlewares.ClientParser(router))
 	defer ts.Close()
@@ -40,29 +47,20 @@ func TestMailingHandler(t *testing.T) {
 		wantStatusCode int
 	}{
 		{
-			name: "POST api/mail/otp",
+			name: "DELETE api/me/session",
 			args: args{
-				method: http.MethodPost,
-				path:   "api/mail/otp",
-				requestBody: map[string]interface{}{
-					"recipient_name": "Adhitya Ramadhanus",
-					"recipient":      "adhitya.ramadhanus@gmail.com",
-					"type":           "TFA Verification",
-					"otp":            "123123",
-				},
+				method:      http.MethodDelete,
+				path:        "api/me/session",
+				requestBody: map[string]interface{}{},
 			},
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name: "POST api/mail/verification",
+			name: "DELETE api/me/session/other",
 			args: args{
-				method: http.MethodPost,
-				path:   "api/mail/verification",
-				requestBody: map[string]interface{}{
-					"recipient_name":    "Adhitya Ramadhanus",
-					"recipient":         "adhitya.ramadhanus@gmail.com",
-					"verification_link": "testaja",
-				},
+				method:      http.MethodDelete,
+				path:        "api/me/session/other",
+				requestBody: map[string]interface{}{},
 			},
 			wantStatusCode: http.StatusOK,
 		},
