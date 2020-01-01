@@ -1,0 +1,32 @@
+env: "development"
+jwt_secret: "test"
+api:
+  port: 8080
+  host: "localhost"
+mail:
+  port: 8081
+  host: "localhost"
+  queue: ""
+  sender: ""
+  auth_user: "mail"
+  auth_password: "mail"
+  worker_space: "worker_space"
+redis:
+  port: 6379
+  host: "localhost"
+  password: ""
+  db: 0
+postgres:
+  port: 5432
+  host: "localhost"
+  user: "postgres"
+  password: ""
+  dbname: "postgres"
+  sslmode: "disable"
+gcp:
+  application_credentials: ""
+mailjet:
+  mailjet_apikey_public:
+  mailjet_apikey_private:
+log:
+  level: "debug"

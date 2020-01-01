@@ -21,12 +21,14 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
 	github.com/justinas/alice v0.0.0-20171023064455-03f45bd4b7da
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lib/pq v1.2.0
 	github.com/mailjet/mailjet-apiv3-go v0.0.0-20190724151621-55e56f74078c
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
+	github.com/prometheus/common v0.4.0
 	github.com/pyros2097/go-embed v0.0.0-20160412061840-4274f3450521 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/rs/cors v1.7.0
@@ -44,4 +46,5 @@ require (
 	go.opencensus.io v0.22.1 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	google.golang.org/api v0.10.0 // indirect
+	gopkg.in/yaml.v2 v2.2.2
 )
