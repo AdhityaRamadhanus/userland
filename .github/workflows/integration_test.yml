@@ -1,0 +1,36 @@
+name: Vendtron Integration Test
+
+on:
+  pull_request:
+    branches:
+      - "master"
+  push:
+    branches:
+      - "master"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:11.5
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_DB: vendtron-test
+      redis:
+        image: redis:alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Setup Go for use with actions
+        uses: actions/setup-go@v1.0.0
+        with:
+          # The Go version to download (if necessary) and use. Example: 1.9.3
+          version: 1.12.9
+      - run: "curl -L https://github.com/golang-migrate/migrate/releases/download/v4.1.0/migrate.linux-amd64.tar.gz | tar xvz"
+      - run: "./migrate.linux-amd64 -path pkg/storage/postgres/migration -database postgres://postgres@localhost:5432/userland_test?sslmode=disable up 3"
+      - run: "cp .env.sample .env && make integration-test"
